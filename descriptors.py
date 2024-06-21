@@ -13,25 +13,25 @@ def mol_from_smiles(psmiles):
     """
     Convert a PSMILES string to an RDKit molecule object.
 
-    Parameters:
-    psmiles (str): PSMILES string.
+    Args:
+        psmiles (str): PSMILES string.
 
     Returns:
-    rdkit.Chem.Mol: RDKit molecule object.
+        rdkit.Chem.Mol: RDKit molecule object.
     """
     return Chem.MolFromSmiles(psmiles)
 
 
-def degree_two_polymer_from_smiles(psmiles, degree=2):
+def polymer_from_smiles(psmiles, degree=2):
     """
-    Generate a degree 2 polymer from a SMILES string.
+    Generate a linear polymer from a PSMILES string.
     
-    Parameters:
-    psmiles (str): SMILES string of the monomer.
-    degree (int): Degree of the polymer.
+    Args:
+        psmiles (str): SMILES string of the monomer.
+        degree (int): Degree of the polymer.
     
     Returns:
-    str: PSMILES string of the polymer.
+        str: PSMILES string of the polymer.
     """
     deg_smiles = make_linearpolymer(psmiles, degree)
     
@@ -44,22 +44,21 @@ def generate_conformers(mol,
                         max_iters=1000, 
                         num_threads=5, 
                         prune_rms_thresh=0.5, 
-                        non_bonded_thresh=100.0
-                        ):
+                        non_bonded_thresh=100.0):
     """
     Generate conformers for a given molecule.
 
-    Parameters:
-    mol (rdkit.Chem.Mol): RDKit molecule object.
-    num_confs (int): Number of conformers to generate.
-    max_iters (int): Maximum number of iterations for conformer generation.
-    num_threads (int): Number of threads to use.
-    prune_rms_thresh (float): RMS threshold for pruning conformers.
-    non_bonded_thresh (float): Non-bonded threshold for conformer generation.
-    seed (int): Random seed for reproducibility.
+    Args:
+        mol (rdkit.Chem.Mol): RDKit molecule object.
+        num_confs (int): Number of conformers to generate.
+        max_iters (int): Maximum number of iterations for conformer generation.
+        num_threads (int): Number of threads to use.
+        prune_rms_thresh (float): RMS threshold for pruning conformers.
+        non_bonded_thresh (float): Non-bonded threshold for conformer generation.
+        seed (int): Random seed for reproducibility.
 
     Returns:
-    list: List of energies of the generated conformers.
+        list: List of energies of the generated conformers.
     """
     params = AllChem.ETKDGv3()
     params.useSmallRingTorsions = True
@@ -98,11 +97,11 @@ def calc_nconf20(energy_list):
     """
     Calculate the number of conformers within 20 kcal/mol of the lowest energy conformer.
 
-    Parameters:
-    energy_list (list): List of conformer energies.
+    Args:
+        energy_list (list): List of conformer energies.
 
     Returns:
-    int: Number of conformers within 20 kcal/mol of the lowest energy conformer.
+        int: Number of conformers within 20 kcal/mol of the lowest energy conformer.
     """
     if not energy_list:
         return 1
@@ -115,12 +114,12 @@ def n_conf20(psmiles, num_confs=500, seed=100):
     """
     Calculate the n_conf20 descriptor for a given SMILES string.
 
-    Parameters:
-    smiles (str): PSMILES string of the molecule with degree 2.
-    seed (int): Random seed for reproducibility.
+    Args:
+        psmiles (str): PSMILES string of the molecule with degree 2.
+        seed (int): Random seed for reproducibility.
 
     Returns:
-    float: n_conf20 descriptor value.
+        float: n_conf20 descriptor value.
     """
     try:
         mol = Chem.MolFromSmiles(psmiles)
@@ -137,11 +136,11 @@ def calculate_hbond_acceptors(mol):
     """
     Calculate the number of hydrogen bond acceptors for a given RDKit molecule object.
     
-    Parameters:
-    mol (rdkit.Chem.Mol): RDKit molecule object.
+    Args:
+        mol (rdkit.Chem.Mol): RDKit molecule object.
     
     Returns:
-    int: Number of hydrogen bond acceptors.
+        int: Number of hydrogen bond acceptors.
     """
     return Descriptors.NumHAcceptors(mol)
 
@@ -150,11 +149,11 @@ def calculate_hbond_donors(mol):
     """
     Calculate the number of hydrogen bond donors for a given RDKit molecule object.
     
-    Parameters:
-    mol (rdkit.Chem.Mol): RDKit molecule object.
+    Args:
+        mol (rdkit.Chem.Mol): RDKit molecule object.
     
     Returns:
-    int: Number of hydrogen bond donors.
+        int: Number of hydrogen bond donors.
     """
     return Descriptors.NumHDonors(mol)
 
@@ -163,11 +162,11 @@ def calculate_rotatable_bonds(mol):
     """
     Calculate the number of rotatable bonds for a given RDKit molecule object.
 
-    Parameters:
-    mol (rdkit.Chem.Mol): RDKit molecule object.
+    Args:
+        mol (rdkit.Chem.Mol): RDKit molecule object.
 
     Returns:
-    int: Number of rotatable bonds.
+        int: Number of rotatable bonds.
     """
     return Descriptors.NumRotatableBonds(mol)
 
@@ -176,11 +175,11 @@ def calculate_ring_info(mol):
     """
     Calculate ring information for a given RDKit molecule object.
 
-    Parameters:
-    mol (rdkit.Chem.Mol): RDKit molecule object.
+    Args:
+        mol (rdkit.Chem.Mol): RDKit molecule object.
 
     Returns:
-    tuple: Number of rings, number of aromatic rings, number of non-aromatic rings.
+        tuple: Number of rings, number of aromatic rings, number of non-aromatic rings.
     """
     aromatic_rings = [
         ring for ring in Chem.GetSymmSSSR(mol) if mol.GetRingInfo().IsAtomInRingOfSize(ring[0], len(ring)) and mol.GetAtomWithIdx(ring[0]).GetIsAromatic()
@@ -192,14 +191,13 @@ def calculate_ring_info(mol):
 
 
 def mol_to_nx(mol):
-    """
-    Convert an RDKit molecule to a NetworkX graph.
+    """Convert an RDKit molecule to a NetworkX graph.
 
-    Parameters:
-    mol (rdkit.Chem.Mol): RDKit molecule object.
+    Args:
+        mol (rdkit.Chem.Mol): RDKit molecule object.
 
     Returns:
-    networkx.Graph: NetworkX graph representation of the molecule.
+        networkx.Graph: NetworkX graph representation of the molecule.
     """
     G = nx.Graph()
 
@@ -216,14 +214,13 @@ def mol_to_nx(mol):
 
 
 def find_shortest_paths_between_stars(G):
-    """
-    Find the shortest paths between star nodes in a graph.
+    """Find the shortest paths between star nodes in a graph.
 
-    Parameters:
-    G (networkx.Graph): NetworkX graph.
+    Args:
+        G (networkx.Graph): NetworkX graph.
 
     Returns:
-    list: List of shortest paths between star nodes.
+        list: List of shortest paths between star nodes.
     """
     star_nodes = [node for node, data in G.nodes(data=True) if data['element'] == '*']
     shortest_paths = []
@@ -238,15 +235,14 @@ def find_shortest_paths_between_stars(G):
 
 
 def find_cycles_including_paths(G, paths):
-    """
-    Find cycles in a graph that include given paths.
+    """Find cycles in a graph that include given paths.
 
-    Parameters:
-    G (networkx.Graph): NetworkX graph.
-    paths (list): List of paths.
+    Args:
+        G (networkx.Graph): NetworkX graph.
+        paths (list): List of paths.
 
     Returns:
-    list: List of cycles that include the given paths.
+        list: List of cycles that include the given paths.
     """
     cycles = set()
     for path in paths:
@@ -268,15 +264,14 @@ def find_cycles_including_paths(G, paths):
 
 
 def add_degree_one_nodes_to_backbone(G, backbone):
-    """
-    Add degree one nodes to the backbone of a graph.
+    """Add degree one nodes to the backbone of a graph.
 
-    Parameters:
-    G (networkx.Graph): NetworkX graph.
-    backbone (list): List of backbone nodes.
+    Args:
+        G (networkx.Graph): NetworkX graph.
+        backbone (list): List of backbone nodes.
 
     Returns:
-    list: Updated list of backbone nodes.
+        list: Updated list of backbone nodes.
     """
     for node in list(G.nodes):
         if G.degree[node] == 1:
@@ -287,14 +282,13 @@ def add_degree_one_nodes_to_backbone(G, backbone):
 
 
 def classify_backbone_and_sidechains(G):
-    """
-    Classify nodes in a graph as backbone or sidechain nodes.
+    """Classify nodes in a graph as backbone or sidechain nodes.
 
-    Parameters:
-    G (networkx.Graph): NetworkX graph.
+    Args:
+        G (networkx.Graph): NetworkX graph.
 
     Returns:
-    tuple: List of backbone nodes, list of sidechain nodes.
+        tuple: List of backbone nodes, list of sidechain nodes.
     """
     shortest_paths = find_shortest_paths_between_stars(G)
     cycles = find_cycles_including_paths(G, shortest_paths)
@@ -361,9 +355,8 @@ def group_side_chain_and_backbone_bridges(side_chain_bridges, backbone_bridges):
         side_chain_lengths = []
         current_side_chain = []
 
-        for i in range(len(side_chain_bridges)):
-            bridge = side_chain_bridges[i]
-            if not current_side_chain or bridge[0] in current_side_chain[-1]:
+        for bridge in side_chain_bridges:
+            if not current_side_chain or bridge[0] in current_side_chain[-1] or bridge[1] in current_side_chain[-1]:
                 current_side_chain.append(bridge)
             else:
                 grouped_side_chains.append(tuple(current_side_chain))
@@ -384,9 +377,8 @@ def group_side_chain_and_backbone_bridges(side_chain_bridges, backbone_bridges):
         backbone_lengths = []
         current_backbone = []
 
-        for i in range(len(backbone_bridges)):
-            bridge = backbone_bridges[i]
-            if not current_backbone or bridge[0] in current_backbone[-1]:
+        for bridge in backbone_bridges:
+            if not current_backbone or bridge[0] in current_backbone[-1] or bridge[1] in current_backbone[-1]:
                 current_backbone.append(bridge)
             else:
                 grouped_backbones.append(tuple(current_backbone))
@@ -414,41 +406,27 @@ def number_and_length_of_sidechains_and_backbones(grouped_side_chains, grouped_b
         list: A list of sets, where each set represents a sidechain.
         list: A list of sets, where each set represents a backbone.
     """
-    def sort_tuple(t):
-        return sorted(t)
 
-    sorted_side_chain_groups = list(map(sort_tuple, grouped_side_chains))
-
-    all_side_chain_groups = []
-    for g in sorted_side_chain_groups:
-        all_side_chain_groups.extend(g)
-
+    all_side_chain_groups = [bridge for group in grouped_side_chains for bridge in group]
     side_chain_graph = nx.Graph(all_side_chain_groups)
-
     sidechains = list(nx.connected_components(side_chain_graph))
 
-    sorted_backbone_groups = list(map(sort_tuple, grouped_backbones))
-
-    all_backbone_groups = []
-    for g in sorted_backbone_groups:
-        all_backbone_groups.extend(g)
-
+    all_backbone_groups = [bridge for group in grouped_backbones for bridge in group]
     backbone_graph = nx.Graph(all_backbone_groups)
-
     backbones = list(nx.connected_components(backbone_graph))
 
     return sidechains, backbones
 
 
 def process_and_save(df, PSMILES_deg_col, output_file, batch_size=1):
-    """
-    Process the DataFrame in batches and save the results periodically.
+    """Process the DataFrame in batches and save the results periodically.
 
-    Parameters:
-    df (pd.DataFrame): DataFrame to process.
-    PSMILES_deg_col (str): Column name of the PSMILES with degree 2.
-    output_file (str): Path to the output CSV file.
-    batch_size (int): Number of rows to process in each batch.
+    Args:
+        df (pd.DataFrame): DataFrame to process.
+        PSMILES_deg_col (str): Column name of the PSMILES with degree 2.
+        output_file (str): Path to the output CSV file.
+        batch_size (int): Number of rows to process in each batch.
+
     """
     for start in range(0, len(df), batch_size):
         end = min(start + batch_size, len(df))
@@ -458,15 +436,16 @@ def process_and_save(df, PSMILES_deg_col, output_file, batch_size=1):
         df.to_csv(output_file, index=False)
         print(f"Processed rows {start} to {end} and saved to {output_file}")
 
-def main(input_file, PSMILES_deg_col, PSMILES, output_file):
-    """
-    Main function to process the input CSV file and save the results.
 
-    Parameters:
-    input_file (str): Path to the input CSV file.
-    PSMILES_deg_col (str): Column name of the PSMILES with degree 2.
-    PSMILES (str): Column name of the PSMILES.
-    output_file (str): Path to the output CSV file.
+def main(input_file, PSMILES_deg_col, PSMILES, output_file):
+    """Main function to process the input CSV file and save the results.
+
+    Args:
+        input_file (str): Path to the input CSV file.
+        PSMILES_deg_col (str): Column name of the PSMILES with degree 2.
+        PSMILES (str): Column name of the PSMILES.
+        output_file (str): Path to the output CSV file.
+
     """
     # Initialize pandarallel
     pandarallel.initialize(progress_bar=True)
@@ -478,7 +457,7 @@ def main(input_file, PSMILES_deg_col, PSMILES, output_file):
         return
 
     # Create the dp_2 column without saving to input file
-    df[PSMILES_deg_col] = df[PSMILES].apply(lambda x: degree_two_polymer_from_smiles(x))
+    df[PSMILES_deg_col] = df[PSMILES].apply(lambda x: polymer_from_smiles(x))
 
     # Check if the output file already exists
     if os.path.exists(output_file):
@@ -488,7 +467,7 @@ def main(input_file, PSMILES_deg_col, PSMILES, output_file):
         df['nconf20_2'] = np.nan
 
     # Ensure dp_2 is created and populated before processing
-    df[PSMILES_deg_col] = df[PSMILES].apply(lambda x: degree_two_polymer_from_smiles(x))
+    df[PSMILES_deg_col] = df[PSMILES].apply(lambda x: polymer_from_smiles(x))
 
     # Process each row in parallel using pandarallel and save periodically
     process_and_save(df, PSMILES_deg_col, output_file)
@@ -560,10 +539,10 @@ def main(input_file, PSMILES_deg_col, PSMILES, output_file):
     df.to_csv(output_file, index=False)
     print(f"Final DataFrame saved to {output_file}")
 
+
 if __name__ == "__main__":
     input_file = os.path.join(os.path.expanduser("~"), "Poly_descriptors", "data", "Polymer_Tg.csv")
     output_file = os.path.join(os.path.expanduser("~"), "Poly_descriptors", "data", "Polymer_Tg_descriptors.csv")
     PSMILES_deg_col = 'dp_2'
     PSMILES = 'PSMILES'
     main(input_file, PSMILES_deg_col, PSMILES, output_file)
-
