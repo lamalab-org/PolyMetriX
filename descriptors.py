@@ -6,20 +6,36 @@ from rdkit.Chem import AllChem, Descriptors
 from collections import OrderedDict
 from pandarallel import pandarallel
 import networkx as nx
+from radonpy.core.poly import make_linearpolymer
 
-pandarallel.initialize(progress_bar=True)
 
-def mol_from_smiles(smiles):
+def mol_from_smiles(psmiles):
     """
-    Convert a SMILES string to an RDKit molecule object.
+    Convert a PSMILES string to an RDKit molecule object.
 
     Parameters:
-    smiles (str): SMILES string.
+    psmiles (str): PSMILES string.
 
     Returns:
     rdkit.Chem.Mol: RDKit molecule object.
     """
-    return Chem.MolFromSmiles(smiles)
+    return Chem.MolFromSmiles(psmiles)
+
+
+def degree_two_polymer_from_smiles(psmiles, degree=2):
+    """
+    Generate a degree 2 polymer from a SMILES string.
+    
+    Parameters:
+    psmiles (str): SMILES string of the monomer.
+    degree (int): Degree of the polymer.
+    
+    Returns:
+    str: PSMILES string of the polymer.
+    """
+    deg_smiles = make_linearpolymer(psmiles, degree)
+    
+    return deg_smiles
 
 
 def generate_conformers(mol, 
@@ -115,6 +131,32 @@ def n_conf20(psmiles, num_confs=500, seed=100):
     except Exception as e:
         print(f"Failed to compute descriptor for {psmiles}: {e}")
         return np.nan
+
+
+def calculate_hbond_acceptors(mol):
+    """
+    Calculate the number of hydrogen bond acceptors for a given RDKit molecule object.
+    
+    Parameters:
+    mol (rdkit.Chem.Mol): RDKit molecule object.
+    
+    Returns:
+    int: Number of hydrogen bond acceptors.
+    """
+    return Descriptors.NumHAcceptors(mol)
+
+
+def calculate_hbond_donors(mol):
+    """
+    Calculate the number of hydrogen bond donors for a given RDKit molecule object.
+    
+    Parameters:
+    mol (rdkit.Chem.Mol): RDKit molecule object.
+    
+    Returns:
+    int: Number of hydrogen bond donors.
+    """
+    return Descriptors.NumHDonors(mol)
 
 
 def calculate_rotatable_bonds(mol):
@@ -267,7 +309,7 @@ def classify_backbone_and_sidechains(G):
     backbone_nodes = add_degree_one_nodes_to_backbone(G, list(backbone_nodes))
     sidechain_nodes = [node for node in G.nodes if node not in backbone_nodes]
 
-    return list(backbone_nodes), sidechain_nodes
+    return list(set(backbone_nodes)), sidechain_nodes
 
 
 def get_real_backbone_and_sidechain_bridges(G, backbone_nodes, sidechain_nodes):
@@ -295,117 +337,186 @@ def get_real_backbone_and_sidechain_bridges(G, backbone_nodes, sidechain_nodes):
     return backbone_bridges, sidechain_bridges
 
 
-def group_side_chain_bridges(side_chain_bridges):
+def group_side_chain_and_backbone_bridges(side_chain_bridges, backbone_bridges):
     """
-    Group sidechain bridges in a graph.
+    Groups the side chain bridges and backbone bridges into separate tuples of tuples,
+    where each inner tuple represents a continuous side chain or backbone.
+    Also returns the lengths of these side chains and backbones as separate lists.
 
-    Parameters:
-    side_chain_bridges (list): List of sidechain bridges.
+    Args:
+        side_chain_bridges (list): A list of tuples representing the side chain bridges.
+        backbone_bridges (list): A list of tuples representing the backbone bridges.
 
     Returns:
-    tuple: Grouped sidechains, list of sidechain lengths.
+        tuple: A tuple of tuples, where each inner tuple represents a continuous side chain.
+        list: A list containing the lengths of the side chains.
+        tuple: A tuple of tuples, where each inner tuple represents a continuous backbone.
+        list: A list containing the lengths of the backbones.
     """
     if not side_chain_bridges:
-        return (), []
+        side_chain_bridges = ()
+        side_chain_lengths = []
+    else:
+        grouped_side_chains = []
+        side_chain_lengths = []
+        current_side_chain = []
 
-    grouped_side_chains = []
-    side_chain_lengths = []
-    current_side_chain = []
+        for i in range(len(side_chain_bridges)):
+            bridge = side_chain_bridges[i]
+            if not current_side_chain or bridge[0] in current_side_chain[-1]:
+                current_side_chain.append(bridge)
+            else:
+                grouped_side_chains.append(tuple(current_side_chain))
+                side_chain_lengths.append(len(current_side_chain))
+                current_side_chain = [bridge]
 
-    for i in range(len(side_chain_bridges)):
-        bridge = side_chain_bridges[i]
-        if not current_side_chain or bridge[0] in current_side_chain[-1]:
-            current_side_chain.append(bridge)
-        else:
+        if current_side_chain:
             grouped_side_chains.append(tuple(current_side_chain))
             side_chain_lengths.append(len(current_side_chain))
-            current_side_chain = [bridge]
 
-    if current_side_chain:
-        grouped_side_chains.append(tuple(current_side_chain))
-        side_chain_lengths.append(len(current_side_chain))
+        side_chain_bridges = tuple(grouped_side_chains)
 
-    return tuple(grouped_side_chains), side_chain_lengths
+    if not backbone_bridges:
+        backbone_bridges = ()
+        backbone_lengths = []
+    else:
+        grouped_backbones = []
+        backbone_lengths = []
+        current_backbone = []
+
+        for i in range(len(backbone_bridges)):
+            bridge = backbone_bridges[i]
+            if not current_backbone or bridge[0] in current_backbone[-1]:
+                current_backbone.append(bridge)
+            else:
+                grouped_backbones.append(tuple(current_backbone))
+                backbone_lengths.append(len(current_backbone))
+                current_backbone = [bridge]
+
+        if current_backbone:
+            grouped_backbones.append(tuple(current_backbone))
+            backbone_lengths.append(len(current_backbone))
+
+        backbone_bridges = tuple(grouped_backbones)
+
+    return side_chain_bridges, side_chain_lengths, backbone_bridges, backbone_lengths
 
 
-def number_and_length_of_sidechains(grouped_side_chains):
+def number_and_length_of_sidechains_and_backbones(grouped_side_chains, grouped_backbones):
     """
-    Calculate the number and length of sidechains in a graph.
+    Merges common bridges from the grouped side chain bridges and backbone bridges.
 
-    Parameters:
-    grouped_side_chains (tuple): Grouped sidechains.
+    Args:
+        grouped_side_chains (tuple): A tuple of tuples, where each inner tuple represents a continuous side chain.
+        grouped_backbones (tuple): A tuple of tuples, where each inner tuple represents a continuous backbone.
 
     Returns:
-    list: List of sidechains.
+        list: A list of sets, where each set represents a sidechain.
+        list: A list of sets, where each set represents a backbone.
     """
     def sort_tuple(t):
         return sorted(t)
 
-    sorted_groups = list(map(sort_tuple, grouped_side_chains))
-    all_groups = []
-    for g in sorted_groups:
-        all_groups.extend(g)
+    sorted_side_chain_groups = list(map(sort_tuple, grouped_side_chains))
 
-    G = nx.Graph(all_groups)
-    sidechains = list(nx.connected_components(G))
+    all_side_chain_groups = []
+    for g in sorted_side_chain_groups:
+        all_side_chain_groups.extend(g)
 
-    return sidechains
+    side_chain_graph = nx.Graph(all_side_chain_groups)
+
+    sidechains = list(nx.connected_components(side_chain_graph))
+
+    sorted_backbone_groups = list(map(sort_tuple, grouped_backbones))
+
+    all_backbone_groups = []
+    for g in sorted_backbone_groups:
+        all_backbone_groups.extend(g)
+
+    backbone_graph = nx.Graph(all_backbone_groups)
+
+    backbones = list(nx.connected_components(backbone_graph))
+
+    return sidechains, backbones
 
 
-def process_and_save(df, output_file, batch_size=1):
+def process_and_save(df, PSMILES_deg_col, output_file, batch_size=1):
     """
     Process the DataFrame in batches and save the results periodically.
 
     Parameters:
     df (pd.DataFrame): DataFrame to process.
+    PSMILES_deg_col (str): Column name of the PSMILES with degree 2.
     output_file (str): Path to the output CSV file.
     batch_size (int): Number of rows to process in each batch.
     """
     for start in range(0, len(df), batch_size):
         end = min(start + batch_size, len(df))
         batch = df.iloc[start:end]
-        batch['nconf20_2'] = batch['dp_2'].parallel_apply(n_conf20)
+        batch['nconf20_2'] = batch[PSMILES_deg_col].parallel_apply(n_conf20)
         df.update(batch)
         df.to_csv(output_file, index=False)
         print(f"Processed rows {start} to {end} and saved to {output_file}")
 
-
-def main(input_file, output_file):
+def main(input_file, PSMILES_deg_col, PSMILES, output_file):
     """
     Main function to process the input CSV file and save the results.
 
     Parameters:
     input_file (str): Path to the input CSV file.
+    PSMILES_deg_col (str): Column name of the PSMILES with degree 2.
+    PSMILES (str): Column name of the PSMILES.
     output_file (str): Path to the output CSV file.
     """
+    # Initialize pandarallel
+    pandarallel.initialize(progress_bar=True)
+
+    try:
+        df = pd.read_csv(input_file)
+    except pd.errors.ParserError as e:
+        print(f"Error parsing CSV file: {e}")
+        return
+
+    # Create the dp_2 column without saving to input file
+    df[PSMILES_deg_col] = df[PSMILES].apply(lambda x: degree_two_polymer_from_smiles(x))
+
     # Check if the output file already exists
     if os.path.exists(output_file):
         df = pd.read_csv(output_file)
     else:
-        df = pd.read_csv(input_file)
-        print(f"Initial DataFrame shape: {df.shape}")
+        df = df.copy()
         df['nconf20_2'] = np.nan
 
+    # Ensure dp_2 is created and populated before processing
+    df[PSMILES_deg_col] = df[PSMILES].apply(lambda x: degree_two_polymer_from_smiles(x))
+
     # Process each row in parallel using pandarallel and save periodically
-    process_and_save(df, output_file)
+    process_and_save(df, PSMILES_deg_col, output_file)
 
     # Calculate 2D descriptors
-    df['rotatable_bonds'] = df['dp_2'].apply(lambda smiles: calculate_rotatable_bonds(mol_from_smiles(smiles)))
+    df['hbond_acceptors'] = df[PSMILES_deg_col].apply(lambda smiles: calculate_hbond_acceptors(mol_from_smiles(smiles)))
+    df['hbond_donors'] = df[PSMILES_deg_col].apply(lambda smiles: calculate_hbond_donors(mol_from_smiles(smiles)))
+    df['rotatable_bonds'] = df[PSMILES_deg_col].apply(lambda smiles: calculate_rotatable_bonds(mol_from_smiles(smiles)))
     df['num_rings'], df['num_aromatic_rings'], df['num_non_aromatic_rings'] = zip(
-        *df['dp_2'].apply(lambda smiles: calculate_ring_info(mol_from_smiles(smiles)))
+        *df[PSMILES_deg_col].apply(lambda smiles: calculate_ring_info(mol_from_smiles(smiles)))
     )
 
-    # Initialize new columns for sidechain information
+    # Initialize new columns for sidechain and backbone information
     df['n_sc'] = 0
     df['len_sc'] = ''
-    df['min_length'] = 0
-    df['max_length'] = 0
-    df['mean_length'] = 0.0
+    df['min_length_sc'] = 0
+    df['max_length_sc'] = 0
+    df['mean_length_sc'] = 0.0
+    df['n_bb'] = 0
+    df['len_bb'] = ''
+    df['min_length_bb'] = 0
+    df['max_length_bb'] = 0
+    df['mean_length_bb'] = 0.0
 
     # Iterate over each PSMILES in the DataFrame
     for index, row in df.iterrows():
-        psmiles = row['PSMILES']
-        mol = Chem.MolFromSmiles(psmiles)
+        psmiles = row[PSMILES]
+        mol = mol_from_smiles(psmiles)
         if mol is None:
             continue
 
@@ -414,14 +525,34 @@ def main(input_file, output_file):
         backbone_bridges, sidechain_bridges = get_real_backbone_and_sidechain_bridges(G, backbone_nodes, sidechain_nodes)
 
         try:
-            grouped_side_chains, _ = group_side_chain_bridges(sidechain_bridges)
-            sidechains = number_and_length_of_sidechains(grouped_side_chains)
+            side_chain_bridges, side_chain_lengths, backbone_bridges, backbone_lengths = group_side_chain_and_backbone_bridges(sidechain_bridges, backbone_bridges)
+            sidechains, backbones = number_and_length_of_sidechains_and_backbones(side_chain_bridges, backbone_bridges)
             df.at[index, 'n_sc'] = len(sidechains)
-            sidechain_lengths = [len(sidechain) for sidechain in sidechains]
-            df.at[index, 'len_sc'] = str(sidechain_lengths)
-            df.at[index, 'min_length'] = min(sidechain_lengths)
-            df.at[index, 'max_length'] = max(sidechain_lengths)
-            df.at[index, 'mean_length'] = sum(sidechain_lengths) / len(sidechain_lengths)
+            df.at[index, 'n_bb'] = len(backbones)
+
+            if sidechains:
+                sidechain_lengths = [len(sidechain) for sidechain in sidechains]
+                df.at[index, 'len_sc'] = str(sidechain_lengths)
+                df.at[index, 'min_length_sc'] = min(sidechain_lengths)
+                df.at[index, 'max_length_sc'] = max(sidechain_lengths)
+                df.at[index, 'mean_length_sc'] = sum(sidechain_lengths) / len(sidechain_lengths)
+            else:
+                df.at[index, 'len_sc'] = ''
+                df.at[index, 'min_length_sc'] = 0
+                df.at[index, 'max_length_sc'] = 0
+                df.at[index, 'mean_length_sc'] = 0.0
+
+            if backbones:
+                backbone_lengths = [len(backbone) for backbone in backbones]
+                df.at[index, 'len_bb'] = str(backbone_lengths)
+                df.at[index, 'min_length_bb'] = min(backbone_lengths)
+                df.at[index, 'max_length_bb'] = max(backbone_lengths)
+                df.at[index, 'mean_length_bb'] = sum(backbone_lengths) / len(backbone_lengths)
+            else:
+                df.at[index, 'len_bb'] = ''
+                df.at[index, 'min_length_bb'] = 0
+                df.at[index, 'max_length_bb'] = 0
+                df.at[index, 'mean_length_bb'] = 0.0
         except ValueError:
             pass
 
@@ -429,9 +560,10 @@ def main(input_file, output_file):
     df.to_csv(output_file, index=False)
     print(f"Final DataFrame saved to {output_file}")
 
-
 if __name__ == "__main__":
-    input_file = os.path.join(os.path.expanduser("~"), "data", "Polymer_Tg.csv")
-    output_file = os.path.join(os.path.expanduser("~"), "data", "Polymer_Tg_descriptors.csv")
-    main(input_file, output_file)
-    
+    input_file = os.path.join(os.path.expanduser("~"), "Poly_descriptors", "data", "Polymer_Tg.csv")
+    output_file = os.path.join(os.path.expanduser("~"), "Poly_descriptors", "data", "Polymer_Tg_descriptors.csv")
+    PSMILES_deg_col = 'dp_2'
+    PSMILES = 'PSMILES'
+    main(input_file, PSMILES_deg_col, PSMILES, output_file)
+
