@@ -1,0 +1,156 @@
+[build-system]
+requires = ["setuptools", "wheel"]
+build-backend = "setuptools.build_meta"
+
+
+[project]
+name = "polymetrix"
+description = "A framework for calculating descriptors for polymers"
+version = "0.0.1"
+readme = "README.md"
+license = { text = "MIT" }
+authors = [
+  { name = "Sreekanth Kunchapu", email = "sreekanthkuncha@gmail.com" },
+  { name = "Kevin Jablonka", email = "mail@kjablonka.com" },
+]
+keywords = ["Polymer", "flexibility descriptors", "Physics-based descriptors"]
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "Intended Audience :: Science/Research",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.9",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Intended Audience :: Science/Research",
+  "Topic :: Scientific/Engineering",
+  "Operating System :: Microsoft :: Windows",
+  "Operating System :: Unix",
+  "Operating System :: MacOS",
+]
+requires-python = ">=3.9, <3.13"
+dependencies = [
+  "nbformat",
+  "networkx",
+  "numpy",
+  "pandarallel",
+  "pandas",
+  "radonpy-pypi",
+  "rdkit",
+  "matplotlib",
+]
+
+[project.optional-dependencies]
+dev = [
+  "jupyter",
+  "docformatter",
+  "pytest",
+  "pytest-cov",
+  "ruff",
+  "bump-my-version",
+]
+
+docs = [
+  "mkdocs-material>=9.4.0",
+  "mkdocstrings[python]>=0.22.0",
+  "mkdocs-gen-files>=0.5.0",
+  "mkdocs-literate-nav>=0.6.0",
+]
+
+decoder = ["pyxtal"]
+
+[tool.setuptools.package-data]
+template = ["py.typed"]
+
+[tool.pyright]
+include = ["template"]
+exclude = ["**/__pycache__"]
+
+[tool.pytest.ini_options]
+minversion = "6.0"
+addopts = ["-p no:warnings", "--import-mode=importlib"]
+xfail_strict = true
+log_cli_level = "warn"
+testpaths = ["tests"]
+
+
+[tool.coverage.run]
+source = ["src"]
+
+[tool.coverage.report]
+exclude_also = [
+  "if TYPE_CHECKING:",
+  "if __name__ == .__main__.:",
+  "except ImportError",
+]
+
+[tool.ruff]
+select = [
+  "E",
+  "F",
+  "W",   # flake8
+  "B",   # flake8-bugbear
+  "I",   # isort
+  "ARG", # flake8-unused-arguments
+  "C4",  # flake8-comprehensions
+  "EM",  # flake8-errmsg
+  "ICN", # flake8-import-conventions
+  "ISC", # flake8-implicit-str-concat
+  "G",   # flake8-logging-format
+  "PGH", # pygrep-hooks
+  "PIE", # flake8-pie
+  "PL",  # pylint
+  "PT",  # flake8-pytest-style
+  "PTH", # flake8-use-pathlib
+  "RET", # flake8-return
+  "RUF", # Ruff-specific
+  "SIM", # flake8-simplify
+  "T20", # flake8-print
+  "UP",  # pyupgrade
+  "YTT", # flake8-2020
+  "EXE", # flake8-executable
+  "NPY", # NumPy specific rules
+  "PD",  # pandas-vet
+]
+extend-ignore = [
+  "PLR",   # Design related pylint codes
+  "E501",  # Line too long
+  "PT004", # Use underscore for non-returning fixture (use usefixture instead)
+  "B028",  # No explicit stacklevel
+  "EM101", # Exception must not use a string literal
+  "EM102", # Exception must not use an f-string literal
+]
+typing-modules = ["mypackage._compat.typing"]
+src = ["src"]
+unfixable = [
+  "T20",  # Removes print statements
+  "F841", # Removes unused variables
+]
+exclude = []
+flake8-unused-arguments.ignore-variadic-names = true
+extend-exclude = ["tests"]
+pydocstyle.convention = "numpy"
+isort.known-first-party = ["template"]
+
+[tool.docformatter]
+pre-summary-newline = true
+black = true
+
+
+[tool.bumpversion]
+current_version = "0.0.1-dev"
+commit = true
+commit_args = "--no-verify --allow-empty"
+tag = true
+tag_name = "{new_version}"
+allow_dirty = true
+parse = "(?P<major>\\d+)\\.(?P<minor>\\d+)\\.(?P<patch>\\d+)(\\.(?P<dev>post)\\d+\\.dev\\d+)?"
+serialize = [
+  "{major}.{minor}.{patch}.{dev}{$PR_NUMBER}.dev{distance_to_latest_tag}",
+  "{major}.{minor}.{patch}",
+]
+message = "Version updated from {current_version} to {new_version}"
+
+
+[tool.bumpversion.parts.dev]
+values = ["release", "post", "dev"]
