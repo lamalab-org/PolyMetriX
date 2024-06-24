@@ -34,7 +34,7 @@ pip install mattext
 Clone this repository (you need `git` for this, if you get a `missing command` error for `git` you can install it with `sudo apt-get install git`)
 
 ```bash
-git clone https://github.com/lamalab-org/Poly_descriptors.git
+git clone https://github.com/lamalab-org/PolyMetriX.git
 cd polymetrix
 ```
 
