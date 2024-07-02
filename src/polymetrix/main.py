@@ -10,14 +10,12 @@ from polymetrix.core.descriptors import (
     calculate_rotatable_bonds,
     classify_backbone_and_sidechains,
     get_real_backbone_and_sidechain_bridges,
-    group_side_chain_and_backbone_bridges,
     mol_from_smiles,
     mol_to_nx,
     number_and_length_of_sidechains_and_backbones,
     polymer_from_smiles,
     process_and_save,
 )
-
 
 def main(input_file, PSMILES_deg_col, PSMILES, output_file):
     """Main function to process the input CSV file and save the results.
@@ -67,7 +65,7 @@ def main(input_file, PSMILES_deg_col, PSMILES, output_file):
     df['num_rings'], df['num_aromatic_rings'], df['num_non_aromatic_rings'] = zip(*df[PSMILES_deg_col].apply(
         lambda smiles: calculate_ring_info(mol_from_smiles(smiles)))
     )
-
+    
     # Initialize new columns for sidechain and backbone information
     df['n_sc'] = 0
     df['len_sc'] = ''
@@ -92,8 +90,7 @@ def main(input_file, PSMILES_deg_col, PSMILES, output_file):
         backbone_bridges, sidechain_bridges = get_real_backbone_and_sidechain_bridges(G, backbone_nodes, sidechain_nodes)
 
         try:
-            side_chain_bridges, side_chain_lengths, backbone_bridges, backbone_lengths = group_side_chain_and_backbone_bridges(sidechain_bridges, backbone_bridges)
-            sidechains, backbones = number_and_length_of_sidechains_and_backbones(side_chain_bridges, backbone_bridges)
+            sidechains, backbones = number_and_length_of_sidechains_and_backbones(sidechain_bridges, backbone_bridges)
             df.loc[index, 'n_sc'] = len(sidechains)
             df.loc[index, 'n_bb'] = len(backbones)
 
@@ -129,8 +126,8 @@ def main(input_file, PSMILES_deg_col, PSMILES, output_file):
 
 
 if __name__ == "__main__":
-    input_file = Path.home().joinpath("Poly_descriptors", "data", "dummy.csv")
-    output_file = Path.home().joinpath("Poly_descriptors", "data", "Polymer_Tg_descriptors_dummy.csv")
+    input_file = Path.home().joinpath("PolyMetriX", "data", "dummy.csv")
+    output_file = Path.home().joinpath("PolyMetriX", "data", "Polymer_Tg_descriptors_dummy.csv")
     PSMILES_deg_col = 'dp_2'
     PSMILES = 'PSMILES'
     main(input_file, PSMILES_deg_col, PSMILES, output_file)
