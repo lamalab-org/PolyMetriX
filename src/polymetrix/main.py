@@ -85,12 +85,15 @@ def main(input_file, PSMILES_deg_col, PSMILES, output_file):
         if mol is None:
             continue
 
-        G = mol_to_nx(mol)
-        backbone_nodes, sidechain_nodes = classify_backbone_and_sidechains(G)
-        backbone_bridges, sidechain_bridges = get_real_backbone_and_sidechain_bridges(G, backbone_nodes, sidechain_nodes)
+        graph = mol_to_nx(mol)
+        backbone_nodes, sidechain_nodes = classify_backbone_and_sidechains(graph)
+        backbone_bridges, sidechain_bridges = get_real_backbone_and_sidechain_bridges(
+            graph, backbone_nodes, sidechain_nodes)
 
         try:
-            sidechains, backbones = number_and_length_of_sidechains_and_backbones(sidechain_bridges, backbone_bridges)
+            sidechains, backbones = number_and_length_of_sidechains_and_backbones(
+            sidechain_bridges, backbone_bridges)
+
             df.loc[index, 'n_sc'] = len(sidechains)
             df.loc[index, 'n_bb'] = len(backbones)
 

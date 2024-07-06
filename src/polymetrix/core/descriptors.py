@@ -194,72 +194,129 @@ def mol_to_nx(mol):
     """Convert an RDKit molecule to a NetworkX graph.
 
     Args:
-        mol (rdkit.Chem.Mol): RDKit molecule object.
+        mol (rdkit.Chem.rdchem.Mol): An RDKit molecule object.
 
     Returns:
-        networkx.Graph: NetworkX graph representation of the molecule.
+        networkx.Graph: A NetworkX graph representation of the molecule.
     """
-    G = nx.Graph()
-
+    graph = nx.Graph()
     for atom in mol.GetAtoms():
-        G.add_node(atom.GetIdx(), element=atom.GetSymbol())
-
+        graph.add_node(atom.GetIdx(), element=atom.GetSymbol())
     for bond in mol.GetBonds():
         start = bond.GetBeginAtomIdx()
         end = bond.GetEndAtomIdx()
         order = bond.GetBondType()
-        G.add_edge(start, end, order=order)
+        graph.add_edge(start, end, order=order)
 
-    return G
+    return graph
 
-def classify_backbone_and_sidechains(G):
-    """Classify nodes in a graph as backbone or sidechain nodes.
+
+def find_shortest_paths_between_stars(graph):
+    """Find the shortest paths between star nodes in a graph.
 
     Args:
-        G (networkx.Graph): NetworkX graph.
+        graph (networkx.Graph): A NetworkX graph.
 
     Returns:
-        tuple: List of backbone nodes, list of sidechain nodes.
+        list: A list of shortest paths between star nodes.
     """
-    star_nodes = [node for node, data in G.nodes(data=True) if data['element'] == '*']
-    
-    backbone_nodes = set()
+    star_nodes = [node for node, data in graph.nodes(data=True)
+                  if data['element'] == '*']
+    shortest_paths = []
     for i in range(len(star_nodes)):
         for j in range(i + 1, len(star_nodes)):
             try:
-                path = nx.shortest_path(G, source=star_nodes[i], target=star_nodes[j])
-                backbone_nodes.update(path)
+                path = nx.shortest_path(graph, source=star_nodes[i],
+                                        target=star_nodes[j])
+                shortest_paths.append(path)
             except nx.NetworkXNoPath:
                 continue
 
-    # Add degree one nodes to the backbone
-    for node in list(G.nodes):
-        if G.degree[node] == 1:
-            neighbor = list(G.neighbors(node))[0]
-            if neighbor in backbone_nodes:
-                backbone_nodes.add(node)
-
-    sidechain_nodes = [node for node in G.nodes if node not in backbone_nodes]
-
-    return list(backbone_nodes), sidechain_nodes
+    return shortest_paths
 
 
-def get_real_backbone_and_sidechain_bridges(G, backbone_nodes, sidechain_nodes):
-    """
-    Get the real backbone and sidechain bridges in a graph.
+def find_cycles_including_paths(graph, paths):
+    """Find cycles in a graph that include given paths.
 
-    Parameters:
-    G (networkx.Graph): NetworkX graph.
-    backbone_nodes (list): List of backbone nodes.
-    sidechain_nodes (list): List of sidechain nodes.
+    Args:
+        graph (networkx.Graph): A NetworkX graph.
+        paths (list): A list of paths.
 
     Returns:
-    tuple: List of backbone bridges, list of sidechain bridges.
+        list: A list of cycles that include the given paths.
+    """
+    cycles = set()
+    for path in paths:
+        for node in path:
+            try:
+                all_cycles = nx.cycle_basis(graph, node)
+                for cycle in all_cycles:
+                    if any(n in path for n in cycle):
+                        sorted_cycle = tuple(sorted((min(c), max(c))
+                                             for c in zip(cycle, cycle[1:] + [cycle[0]])))
+                        cycles.add(sorted_cycle)
+            except nx.NetworkXNoCycle:
+                continue
+
+    return [list(cycle) for cycle in cycles]
+
+
+def add_degree_one_nodes_to_backbone(graph, backbone):
+    """Add degree one nodes to the backbone of a graph.
+
+    Args:
+        graph (networkx.Graph): A NetworkX graph.
+        backbone (list): A list of backbone nodes.
+
+    Returns:
+        list: An updated list of backbone nodes including degree one nodes.
+    """
+    for node in list(graph.nodes):
+        if graph.degree[node] == 1:
+            neighbor = next(iter(graph.neighbors(node)))
+            if neighbor in backbone:
+                backbone.append(node)
+
+    return backbone
+
+
+def classify_backbone_and_sidechains(graph):
+    """Classify nodes in a graph as backbone or sidechain nodes.
+
+    Args:
+        graph (networkx.Graph): A NetworkX graph.
+
+    Returns:
+        tuple: A tuple containing lists of backbone and sidechain nodes.
+    """
+    shortest_paths = find_shortest_paths_between_stars(graph)
+    cycles = find_cycles_including_paths(graph, shortest_paths)
+    backbone_nodes = set()
+    for cycle in cycles:
+        for edge in cycle:
+            backbone_nodes.update(edge)
+    for path in shortest_paths:
+        backbone_nodes.update(path)
+    backbone_nodes = add_degree_one_nodes_to_backbone(graph, list(backbone_nodes))
+    sidechain_nodes = [node for node in graph.nodes if node not in backbone_nodes]
+
+    return list(set(backbone_nodes)), sidechain_nodes
+
+
+def get_real_backbone_and_sidechain_bridges(graph, backbone_nodes, sidechain_nodes):
+    """Get the real backbone and sidechain bridges in a graph.
+
+    Args:
+        graph (networkx.Graph): A NetworkX graph.
+        backbone_nodes (list): A list of backbone nodes.
+        sidechain_nodes (list): A list of sidechain nodes.
+
+    Returns:
+        tuple: A tuple containing lists of backbone and sidechain bridges.
     """
     backbone_bridges = []
     sidechain_bridges = []
-
-    for edge in G.edges:
+    for edge in graph.edges:
         start_node, end_node = edge
         if start_node in backbone_nodes and end_node in backbone_nodes:
             backbone_bridges.append(edge)
@@ -268,22 +325,20 @@ def get_real_backbone_and_sidechain_bridges(G, backbone_nodes, sidechain_nodes):
 
     return backbone_bridges, sidechain_bridges
 
+
 def number_and_length_of_sidechains_and_backbones(sidechain_bridges, backbone_bridges):
-    """
-    Merges common bridges from the sidechain bridges and backbone bridges.
+    """Merge common bridges from the side chain bridges and backbone bridges.
 
     Args:
-        sidechain_bridges (list): A list of tuples representing sidechain bridges.
-        backbone_bridges (list): A list of tuples representing backbone bridges.
+        sidechain_bridges (list): A list of sidechain bridges.
+        backbone_bridges (list): A list of backbone bridges.
 
     Returns:
-        list: A list of sets, where each set represents a sidechain.
-        list: A list of sets, where each set represents a backbone.
+        tuple: A tuple containing lists of sidechains and backbones.
     """
-    side_chain_graph = nx.Graph(sidechain_bridges)
-    sidechains = list(nx.connected_components(side_chain_graph))
-
+    sidechain_graph = nx.Graph(sidechain_bridges)
     backbone_graph = nx.Graph(backbone_bridges)
+    sidechains = list(nx.connected_components(sidechain_graph))
     backbones = list(nx.connected_components(backbone_graph))
 
     return sidechains, backbones
