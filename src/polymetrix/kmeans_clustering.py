@@ -3,7 +3,9 @@ from pathlib import Path
 import pandas as pd
 import numpy as np
 from sklearn.cluster import KMeans
+from sklearn.model_selection import train_test_split
 from polymetrix.core.utils import get_fp_ecfp_bitvector
+
 
 def kmeans_clustering(
     data,
@@ -58,6 +60,7 @@ def kmeans_clustering(
 
     return data, optimal_k
 
+
 def find_optimal_k(cluster_range, wcss):
     """Find optimal K using the elbow method.
 
@@ -76,13 +79,15 @@ def find_optimal_k(cluster_range, wcss):
     for i, inertia in enumerate(wcss):
         point = np.array([i + 1, inertia])
         vector = point - first_point
-        distance = np.abs(np.cross(line_vector, vector)) / np.linalg.norm(line_vector)
+        distance = np.abs(np.cross(line_vector, vector)) / \
+            np.linalg.norm(line_vector)
         distances.append(distance)
 
     return distances.index(max(distances)) + 1
 
+
 def create_and_save_splits(data, output_dir, optimal_k, seed):
-    """Create and save train-test splits based on optimal clusters.
+    """Create and save train-valid-test splits based on optimal clusters.
 
     Args:
         data (pd.DataFrame): Data with cluster labels.
@@ -91,16 +96,27 @@ def create_and_save_splits(data, output_dir, optimal_k, seed):
         seed (int): Random seed used for clustering.
     """
     for test_cluster in range(optimal_k):
-        train_data = data[data['cluster_label'] != test_cluster]
+        train_valid_data = data[data['cluster_label'] != test_cluster]
         test_data = data[data['cluster_label'] == test_cluster]
 
-        train_file = Path(output_dir) / f'train_data_extra_{seed}_cluster_{test_cluster}.csv'
-        test_file = Path(output_dir) / f'test_data_extra_{seed}_cluster_{test_cluster}.csv'
+        # Split train_valid_data into train and validation sets
+        train_data, valid_data = train_test_split(
+            train_valid_data, test_size=0.1, random_state=seed)
+
+        train_file = Path(output_dir) / \
+            f'train_data_extra_{seed}_cluster_{test_cluster}.csv'
+        valid_file = Path(output_dir) / \
+            f'val_data_extra_{seed}_cluster_{test_cluster}.csv'
+        test_file = Path(output_dir) / \
+            f'test_data_extra_{seed}_cluster_{test_cluster}.csv'
 
         train_data.to_csv(train_file, index=False)
+        valid_data.to_csv(valid_file, index=False)
         test_data.to_csv(test_file, index=False)
 
-        print(f"Saved train-test split for seed {seed}, test cluster {test_cluster}")
+        print(
+            f"Saved train-valid-test split for seed {seed}, test cluster {test_cluster}")
+
 
 def perform_clustering(
     input_file,
@@ -142,6 +158,7 @@ def perform_clustering(
         print(f"Optimal K (number of clusters) for seed {seed}: {optimal_k}")
 
         create_and_save_splits(clustered_data, output_dir, optimal_k, seed)
+
 
 if __name__ == "__main__":
     perform_clustering(
