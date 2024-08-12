@@ -1,6 +1,7 @@
 from typing import List, Tuple, Optional
 import networkx as nx
 from rdkit import Chem
+from rdkit.Chem.Descriptors import ExactMolWt
 
 
 class Polymer:
@@ -141,7 +142,7 @@ class Polymer:
             float: The molecular weight of the polymer.
         """
         mol = Chem.MolFromSmiles(self._psmiles)
-        return Chem.Descriptors.ExactMolWt(mol)
+        return ExactMolWt(mol)
 
     def get_connection_points(self) -> List[int]:
         """
