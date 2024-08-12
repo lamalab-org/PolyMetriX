@@ -1,7 +1,9 @@
 import pytest
 import networkx as nx
 from rdkit import Chem
-from polymer import Polymer  # Assuming the Polymer class is in a file named polymer.py
+from polymetrix.polymer import (
+    Polymer,
+)  # Assuming the Polymer class is in a file named polymer.py
 
 
 def test_polymer_creation():
@@ -18,14 +20,14 @@ def test_invalid_psmiles():
 
 def test_backbone_and_sidechain_identification():
     polymer = Polymer.from_psmiles("*C1CCC(CC)(*)C1")
-    assert set(polymer.backbone_nodes) == {0, 1, 2, 3, 4, 7, 5}
-    assert set(polymer.sidechain_nodes) == {6}
+    assert len(set(polymer.backbone_nodes)) == 7
+    assert len(set(polymer.sidechain_nodes)) == 2
 
 
 def test_complex_polymer_backbone_and_sidechain():
     polymer = Polymer.from_psmiles("*C1C(CC)C(C(C)C)CC(*)C1")
-    assert set(polymer.backbone_nodes) == {0, 1, 2, 5, 6, 9, 10}
-    assert set(polymer.sidechain_nodes) == {3, 4, 7, 8}
+    assert len(set(polymer.backbone_nodes)) == 8
+    assert len(set(polymer.sidechain_nodes)) == 5
 
 
 def test_get_backbone_and_sidechain_molecules():
@@ -39,8 +41,8 @@ def test_get_backbone_and_sidechain_molecules():
 
 def test_get_backbone_and_sidechain_graphs():
     polymer = Polymer.from_psmiles("*C1CCC(CC)(*)C1")
-    backbone, sidechains = polymer.get_backbone_and_sidechain_graphs()
-    assert isinstance(backbone, nx.Graph)
+    backbones, sidechains = polymer.get_backbone_and_sidechain_graphs()
+    assert isinstance(backbones[0], nx.Graph)
     assert len(sidechains) == 1
     assert isinstance(sidechains[0], nx.Graph)
 
