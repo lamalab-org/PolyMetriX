@@ -44,7 +44,7 @@ class Polymer:
             self._identify_connection_points()
             self._identify_backbone_and_sidechain()
         except Exception as e:
-            raise ValueError(f"Error processing pSMILES: {str(e)}")
+            raise ValueError(f"Error processing pSMILES: {str(e)}") from e
 
     def _mol_to_nx(self, mol: Chem.Mol) -> nx.Graph:
         """Convert an RDKit molecule to a NetworkX graph."""
