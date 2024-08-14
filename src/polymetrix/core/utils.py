@@ -1,12 +1,8 @@
-from rdkit.Chem import AllChem
-from rdkit import Chem
 import numpy as np
-# import wandb
-from sklearn.metrics import (
-    mean_absolute_error,
-    mean_squared_error,
-    r2_score
-)
+from rdkit import Chem
+from rdkit.Chem import AllChem
+
+from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
 
 
 def get_fp_ecfp_bitvector(smiles, radius=2, nBits=2048, info={}):
@@ -18,7 +14,7 @@ def get_fp_ecfp_bitvector(smiles, radius=2, nBits=2048, info={}):
         radius (int, optional): Fingerprint radius. Defaults to 2.
         nBits (int, optional): Number of bits in the fingerprint. Defaults to 2048.
         info (dict, optional): Dictionary to store bit info. Defaults to {}.
-    
+
     Returns:
         rdkit.DataStructs.cDataStructs.ExplicitBitVect: ECFP fingerprint bit vector.
     """
@@ -27,7 +23,8 @@ def get_fp_ecfp_bitvector(smiles, radius=2, nBits=2048, info={}):
         return AllChem.GetMorganFingerprintAsBitVect(mol, radius, nBits, bitInfo=info)
     else:
         return None
-    
+
+
 def calculate_metrics(actual, predicted, model_name, prefix=""):
     """
     Calculate evaluation metrics for model predictions.
@@ -42,13 +39,11 @@ def calculate_metrics(actual, predicted, model_name, prefix=""):
         dict: Dictionary containing evaluation metrics.
     """
     metrics = {
-        'model_name': model_name,
-        'r2': r2_score(actual, predicted),
-        'mae': mean_absolute_error(actual, predicted),
-        'mse': mean_squared_error(actual, predicted),
-        'rmse': np.sqrt(mean_squared_error(actual, predicted)),
-        'mape': np.mean(np.abs((actual - predicted) / actual)) * 100
+        "model_name": model_name,
+        "r2": r2_score(actual, predicted),
+        "mae": mean_absolute_error(actual, predicted),
+        "mse": mean_squared_error(actual, predicted),
+        "rmse": np.sqrt(mean_squared_error(actual, predicted)),
+        "mape": np.mean(np.abs((actual - predicted) / actual)) * 100,
     }
-    # for key, value in metrics.items():
-    #     wandb.log({f"{prefix}_{key}": value})
     return metrics

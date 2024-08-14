@@ -1,9 +1,10 @@
-import os
 from pathlib import Path
-import pandas as pd
+
 import numpy as np
+import pandas as pd
 from sklearn.cluster import KMeans
 from sklearn.model_selection import train_test_split
+
 from polymetrix.core.utils import get_fp_ecfp_bitvector
 
 
@@ -14,9 +15,9 @@ def kmeans_clustering(
     target_column,
     cluster_range,
     random_state,
-    init='k-means++',
+    init="k-means++",
     max_iter=1000,
-    n_init=10
+    n_init=10,
 ):
     """Perform K-means clustering on molecular data.
 
@@ -47,7 +48,7 @@ def kmeans_clustering(
             init=init,
             max_iter=max_iter,
             n_init=n_init,
-            random_state=random_state
+            random_state=random_state,
         )
         kmeans.fit(fingerprints_list)
         wcss.append(kmeans.inertia_)
@@ -55,8 +56,8 @@ def kmeans_clustering(
     optimal_k = find_optimal_k(cluster_range, wcss)
 
     kmeans = KMeans(n_clusters=optimal_k, random_state=random_state)
-    data['cluster_label'] = kmeans.fit_predict(fingerprints_list)
-    data['Source'] = 'cluster_' + data['cluster_label'].astype(str)
+    data["cluster_label"] = kmeans.fit_predict(fingerprints_list)
+    data["Source"] = "cluster_" + data["cluster_label"].astype(str)
 
     return data, optimal_k
 
@@ -79,8 +80,7 @@ def find_optimal_k(cluster_range, wcss):
     for i, inertia in enumerate(wcss):
         point = np.array([i + 1, inertia])
         vector = point - first_point
-        distance = np.abs(np.cross(line_vector, vector)) / \
-            np.linalg.norm(line_vector)
+        distance = np.abs(np.cross(line_vector, vector)) / np.linalg.norm(line_vector)
         distances.append(distance)
 
     return distances.index(max(distances)) + 1
@@ -96,26 +96,31 @@ def create_and_save_splits(data, output_dir, optimal_k, seed):
         seed (int): Random seed used for clustering.
     """
     for test_cluster in range(optimal_k):
-        train_valid_data = data[data['cluster_label'] != test_cluster]
-        test_data = data[data['cluster_label'] == test_cluster]
+        train_valid_data = data[data["cluster_label"] != test_cluster]
+        test_data = data[data["cluster_label"] == test_cluster]
 
         # Split train_valid_data into train and validation sets
         train_data, valid_data = train_test_split(
-            train_valid_data, test_size=0.1, random_state=seed)
+            train_valid_data, test_size=0.1, random_state=seed
+        )
 
-        train_file = Path(output_dir) / \
-            f'train_data_extra_{seed}_cluster_{test_cluster}.csv'
-        valid_file = Path(output_dir) / \
-            f'val_data_extra_{seed}_cluster_{test_cluster}.csv'
-        test_file = Path(output_dir) / \
-            f'test_data_extra_{seed}_cluster_{test_cluster}.csv'
+        train_file = (
+            Path(output_dir) / f"train_data_extra_{seed}_cluster_{test_cluster}.csv"
+        )
+        valid_file = (
+            Path(output_dir) / f"val_data_extra_{seed}_cluster_{test_cluster}.csv"
+        )
+        test_file = (
+            Path(output_dir) / f"test_data_extra_{seed}_cluster_{test_cluster}.csv"
+        )
 
         train_data.to_csv(train_file, index=False)
         valid_data.to_csv(valid_file, index=False)
         test_data.to_csv(test_file, index=False)
 
         print(
-            f"Saved train-valid-test split for seed {seed}, test cluster {test_cluster}")
+            f"Saved train-valid-test split for seed {seed}, test cluster {test_cluster}"
+        )
 
 
 def perform_clustering(
@@ -125,7 +130,7 @@ def perform_clustering(
     cluster_range,
     smiles_column,
     fingerprint_column,
-    target_column
+    target_column,
 ):
     """Perform clustering for multiple random seeds and save train-test splits.
 
@@ -144,15 +149,10 @@ def perform_clustering(
 
     for seed in random_seeds:
         clustered_data, optimal_k = kmeans_clustering(
-            data,
-            smiles_column,
-            fingerprint_column,
-            target_column,
-            cluster_range,
-            seed
+            data, smiles_column, fingerprint_column, target_column, cluster_range, seed
         )
 
-        output_file = Path(output_dir) / f'clustering_{seed}.csv'
+        output_file = Path(output_dir) / f"clustering_{seed}.csv"
         clustered_data.to_csv(output_file, index=False)
 
         print(f"Optimal K (number of clusters) for seed {seed}: {optimal_k}")
@@ -162,11 +162,11 @@ def perform_clustering(
 
 if __name__ == "__main__":
     perform_clustering(
-        input_file='/home/ta45woj/PolyMetriX/data/Polymer_Tg_descriptors.csv',
-        output_dir='/home/ta45woj/PolyMetriX/data_splits/extrapolation',
+        input_file="/home/ta45woj/PolyMetriX/data/Polymer_Tg_descriptors.csv",
+        output_dir="/home/ta45woj/PolyMetriX/data_splits/extrapolation",
         random_seeds=range(10, 11),
         cluster_range=range(1, 10),
-        smiles_column='PSMILES',
-        fingerprint_column='fingerprint',
-        target_column='Exp_Tg(K)'
+        smiles_column="PSMILES",
+        fingerprint_column="fingerprint",
+        target_column="Exp_Tg(K)",
     )
