@@ -1,7 +1,8 @@
-from typing import List, Callable, Dict, Any
+from typing import List
+
 import numpy as np
 from rdkit import Chem
-from rdkit.Chem import AllChem, Descriptors
+from rdkit.Chem import Descriptors
 
 
 class BaseFeatureCalculator:
@@ -9,7 +10,8 @@ class BaseFeatureCalculator:
         self.agg = agg
 
     def calculate(self, mol: Chem.Mol) -> np.ndarray:
-        raise NotImplementedError("Calculate method must be implemented by subclasses")
+        raise NotImplementedError(
+            "Calculate method must be implemented by subclasses")
 
     def feature_base_labels(self) -> List[str]:
         raise NotImplementedError(
@@ -17,7 +19,9 @@ class BaseFeatureCalculator:
         )
 
     def feature_labels(self) -> List[str]:
-        return [f"{label}_{agg}" for label in self.feature_base_labels() for agg in self.agg]
+        return [
+            f"{label}_{agg}" for label in self.feature_base_labels() for agg in self.agg
+        ]
 
     def aggregate(self, features: List[np.ndarray]) -> np.ndarray:
         results = []
@@ -42,9 +46,9 @@ class BaseFeatureCalculator:
     def citations(self) -> List[str]:
         return []
 
-
     def implementors(self) -> List[str]:
         return []
+
 
 class NumHBondDonors(BaseFeatureCalculator):
     def calculate(self, mol: Chem.Mol) -> np.ndarray:
@@ -52,6 +56,44 @@ class NumHBondDonors(BaseFeatureCalculator):
 
     def feature_base_labels(self) -> List[str]:
         return ["num_hbond_donors"]
+
+
+class NumHBondAcceptors(BaseFeatureCalculator):
+    def calculate(self, mol: Chem.Mol) -> np.ndarray:
+        return np.array([Descriptors.NumHAcceptors(mol)])
+
+    def feature_base_labels(self) -> List[str]:
+        return ["num_hbond_acceptors"]
+
+
+class NumRotatableBonds(BaseFeatureCalculator):
+    def calculate(self, mol: Chem.Mol) -> np.ndarray:
+        return np.array([Descriptors.NumRotatableBonds(mol)])
+
+    def feature_base_labels(self) -> List[str]:
+        return ["num_rotatable_bonds"]
+
+
+class NumRings(BaseFeatureCalculator):
+    def calculate(self, mol: Chem.Mol) -> np.ndarray:
+        return np.array([Chem.GetSSSR(mol)])
+
+    def feature_base_labels(self) -> List[str]:
+        return ["num_rings"]
+
+
+class NumNonAromaticRings(BaseFeatureCalculator):
+    def calculate(self, mol: Chem.Mol) -> np.ndarray:
+        non_aromatic_rings = sum(
+            1
+            for ring in mol.GetRingInfo().AtomRings()
+            if not all(mol.GetAtomWithIdx(i).GetIsAromatic() for i in ring)
+        )
+        return np.array([non_aromatic_rings])
+
+    def feature_base_labels(self) -> List[str]:
+        return ["num_non_aromatic_rings"]
+
 
 class NumAromaticRings(BaseFeatureCalculator):
     def calculate(self, mol: Chem.Mol) -> np.ndarray:
@@ -71,7 +113,8 @@ class PolymerPartFeaturizer:
         self.calculator = calculator
 
     def featurize(self, polymer) -> np.ndarray:
-        raise NotImplementedError("Featurize method must be implemented by subclasses")
+        raise NotImplementedError(
+            "Featurize method must be implemented by subclasses")
 
     def feature_labels(self) -> List[str]:
         return [
