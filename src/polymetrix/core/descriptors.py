@@ -120,7 +120,7 @@ def calc_nconf20(energy_list):
         return 1
     energy_array = np.array(energy_list)
     relative_energies = energy_array - energy_array[0]
-    return np.sum((relative_energies >= 0) & (relative_energies < 20))
+    return np.count_nonzero((relative_energies >= 0) & (relative_energies < 20))
 
 
 def n_conf20(psmiles, num_confs=500, seed=100):
