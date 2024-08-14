@@ -97,7 +97,8 @@ class Polymer:
         Returns:
             Tuple[List[Chem.Mol], List[Chem.Mol]]: Lists of backbone and sidechain molecules.
         """
-        backbone_mol = self._subgraph_to_mol(self._graph.subgraph(self._backbone_nodes))
+        backbone_mol = self._subgraph_to_mol(
+            self._graph.subgraph(self._backbone_nodes))
         sidechain_mols = [
             self._subgraph_to_mol(self._graph.subgraph(nodes))
             for nodes in nx.connected_components(
@@ -173,23 +174,32 @@ def find_shortest_paths_between_stars(graph):
 
 
 def find_cycles_including_paths(graph, paths):
-    cycles = set()
-    for path in paths:
-        for node in path:
-            try:
-                all_cycles = nx.cycle_basis(graph, node)
-                for cycle in all_cycles:
-                    if any(n in path for n in cycle):
-                        sorted_cycle = tuple(
-                            sorted(
-                                (min(c), max(c))
-                                for c in zip(cycle, cycle[1:] + [cycle[0]])
-                            )
-                        )
-                        cycles.add(sorted_cycle)
-            except nx.NetworkXNoCycle:
-                continue
-    return [list(cycle) for cycle in cycles]
+    """Find cycles in a graph that include given paths.
+
+    Args:
+        graph (networkx.Graph): A NetworkX graph.
+        paths (list): A list of paths.
+
+    Returns:
+        list: A list of cycles that include the given paths.
+    """
+    # Compute all cycles in the graph once
+    all_cycles = nx.cycle_basis(graph)
+    path_nodes = {node for path in paths for node in path}
+
+    # Filter cycles that include any node from the paths
+    cycles_including_paths = [
+        cycle for cycle in all_cycles if any(node in path_nodes for node in cycle)
+    ]
+
+    # Sort and remove duplicates from cycles
+    unique_cycles = {
+        tuple(sorted((min(c), max(c))
+              for c in zip(cycle, cycle[1:] + [cycle[0]])))
+        for cycle in cycles_including_paths
+    }
+
+    return [list(cycle) for cycle in unique_cycles]
 
 
 def add_degree_one_nodes_to_backbone(graph, backbone):
@@ -210,6 +220,8 @@ def classify_backbone_and_sidechains(graph):
             backbone_nodes.update(edge)
     for path in shortest_paths:
         backbone_nodes.update(path)
-    backbone_nodes = add_degree_one_nodes_to_backbone(graph, list(backbone_nodes))
-    sidechain_nodes = [node for node in graph.nodes if node not in backbone_nodes]
+    backbone_nodes = add_degree_one_nodes_to_backbone(
+        graph, list(backbone_nodes))
+    sidechain_nodes = [
+        node for node in graph.nodes if node not in backbone_nodes]
     return list(set(backbone_nodes)), sidechain_nodes
