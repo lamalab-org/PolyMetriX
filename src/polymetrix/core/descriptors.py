@@ -1,6 +1,8 @@
-import os
-import pandas as pd
+from collections import OrderedDict
+
+import networkx as nx
 import numpy as np
+from radonpy.core.poly import make_linearpolymer
 from rdkit import Chem
 from rdkit.Chem import AllChem, Descriptors
 from collections import OrderedDict
@@ -25,26 +27,27 @@ def mol_from_smiles(psmiles):
 def polymer_from_smiles(psmiles, degree=2):
     """
     Generate a linear polymer from a PSMILES string.
-    
+
     Args:
         psmiles (str): SMILES string of the monomer.
         degree (int): Degree of the polymer.
-    
+
     Returns:
         str: PSMILES string of the polymer.
     """
-    deg_smiles = make_linearpolymer(psmiles, degree)
-    
-    return deg_smiles
+
+    return make_linearpolymer(psmiles, degree)
 
 
-def generate_conformers(mol, 
-                        num_confs=500, 
-                        seed=100, 
-                        max_iters=1000, 
-                        num_threads=5, 
-                        prune_rms_thresh=0.5, 
-                        non_bonded_thresh=100.0):
+def generate_conformers(
+    mol,
+    num_confs=500,
+    seed=100,
+    max_iters=1000,
+    num_threads=5,
+    prune_rms_thresh=0.5,
+    non_bonded_thresh=100.0,
+):
     """
     Generate conformers for a given molecule.
 
@@ -65,19 +68,30 @@ def generate_conformers(mol,
 
     molecule = Chem.AddHs(mol)
     conformers = AllChem.EmbedMultipleConfs(
-        molecule, numConfs=num_confs, randomSeed=seed, pruneRmsThresh=prune_rms_thresh, numThreads=num_threads
+        molecule,
+        numConfs=num_confs,
+        randomSeed=seed,
+        pruneRmsThresh=prune_rms_thresh,
+        numThreads=num_threads,
     )
     print(f"Generated {len(conformers)} conformers")
 
     try:
         optimised_and_energies = AllChem.MMFFOptimizeMoleculeConfs(
-            molecule, maxIters=max_iters, numThreads=num_threads, nonBondedThresh=non_bonded_thresh
+            molecule,
+            maxIters=max_iters,
+            numThreads=num_threads,
+            nonBondedThresh=non_bonded_thresh,
         )
     except Exception as e:
         print(f"Optimization failed: {e}")
         return []
 
-    energy_dict = {conf: energy for conf, (optimized, energy) in zip(conformers, optimised_and_energies) if optimized == 0}
+    energy_dict = {
+        conf: energy
+        for conf, (optimized, energy) in zip(conformers, optimised_and_energies)
+        if optimized == 0
+    }
     if not energy_dict:
         return []
 
@@ -87,7 +101,10 @@ def generate_conformers(mol,
     final_conformers = OrderedDict()
 
     for conf_id, energy in sorted(energy_dict.items(), key=lambda x: x[1]):
-        if all(AllChem.GetBestRMS(molecule, molecule, ref_id, conf_id, maps) >= 1.0 for ref_id in final_conformers):
+        if all(
+            AllChem.GetBestRMS(molecule, molecule, ref_id, conf_id, maps) >= 1.0
+            for ref_id in final_conformers
+        ):
             final_conformers[conf_id] = energy
 
     return list(final_conformers.values())
@@ -107,7 +124,7 @@ def calc_nconf20(energy_list):
         return 1
     energy_array = np.array(energy_list)
     relative_energies = energy_array - energy_array[0]
-    return np.sum((0 <= relative_energies) & (relative_energies < 20))
+    return np.count_nonzero((relative_energies >= 0) & (relative_energies < 20))
 
 
 def n_conf20(psmiles, num_confs=500, seed=100):
@@ -135,10 +152,10 @@ def n_conf20(psmiles, num_confs=500, seed=100):
 def calculate_hbond_acceptors(mol):
     """
     Calculate the number of hydrogen bond acceptors for a given RDKit molecule object.
-    
+
     Args:
         mol (rdkit.Chem.Mol): RDKit molecule object.
-    
+
     Returns:
         int: Number of hydrogen bond acceptors.
     """
@@ -148,10 +165,10 @@ def calculate_hbond_acceptors(mol):
 def calculate_hbond_donors(mol):
     """
     Calculate the number of hydrogen bond donors for a given RDKit molecule object.
-    
+
     Args:
         mol (rdkit.Chem.Mol): RDKit molecule object.
-    
+
     Returns:
         int: Number of hydrogen bond donors.
     """
@@ -182,10 +199,16 @@ def calculate_ring_info(mol):
         tuple: Number of rings, number of aromatic rings, number of non-aromatic rings.
     """
     aromatic_rings = [
-        ring for ring in Chem.GetSymmSSSR(mol) if mol.GetRingInfo().IsAtomInRingOfSize(ring[0], len(ring)) and mol.GetAtomWithIdx(ring[0]).GetIsAromatic()
+        ring
+        for ring in Chem.GetSymmSSSR(mol)
+        if mol.GetRingInfo().IsAtomInRingOfSize(ring[0], len(ring))
+        and mol.GetAtomWithIdx(ring[0]).GetIsAromatic()
     ]
     non_aromatic_rings = [
-        ring for ring in Chem.GetSymmSSSR(mol) if mol.GetRingInfo().IsAtomInRingOfSize(ring[0], len(ring)) and not mol.GetAtomWithIdx(ring[0]).GetIsAromatic()
+        ring
+        for ring in Chem.GetSymmSSSR(mol)
+        if mol.GetRingInfo().IsAtomInRingOfSize(ring[0], len(ring))
+        and not mol.GetAtomWithIdx(ring[0]).GetIsAromatic()
     ]
     return mol.GetRingInfo().NumRings(), len(aromatic_rings), len(non_aromatic_rings)
 
@@ -220,14 +243,16 @@ def find_shortest_paths_between_stars(graph):
     Returns:
         list: A list of shortest paths between star nodes.
     """
-    star_nodes = [node for node, data in graph.nodes(data=True)
-                  if data['element'] == '*']
+    star_nodes = [
+        node for node, data in graph.nodes(data=True) if data["element"] == "*"
+    ]
     shortest_paths = []
     for i in range(len(star_nodes)):
         for j in range(i + 1, len(star_nodes)):
             try:
-                path = nx.shortest_path(graph, source=star_nodes[i],
-                                        target=star_nodes[j])
+                path = nx.shortest_path(
+                    graph, source=star_nodes[i], target=star_nodes[j]
+                )
                 shortest_paths.append(path)
             except nx.NetworkXNoPath:
                 continue
@@ -252,8 +277,12 @@ def find_cycles_including_paths(graph, paths):
                 all_cycles = nx.cycle_basis(graph, node)
                 for cycle in all_cycles:
                     if any(n in path for n in cycle):
-                        sorted_cycle = tuple(sorted((min(c), max(c))
-                                             for c in zip(cycle, cycle[1:] + [cycle[0]])))
+                        sorted_cycle = tuple(
+                            sorted(
+                                (min(c), max(c))
+                                for c in zip(cycle, cycle[1:] + [cycle[0]])
+                            )
+                        )
                         cycles.add(sorted_cycle)
             except nx.NetworkXNoCycle:
                 continue
@@ -357,7 +386,7 @@ def process_and_save(df, PSMILES_deg_col, output_file, batch_size=1):
     for start in range(0, len(df), batch_size):
         end = min(start + batch_size, len(df))
         batch = df.iloc[start:end]
-        batch['nconf20_2'] = batch[PSMILES_deg_col].parallel_apply(n_conf20)
+        batch["nconf20_2"] = batch[PSMILES_deg_col].parallel_apply(n_conf20)
         df.update(batch)
         df.to_csv(output_file, index=False)
         print(f"Processed rows {start} to {end} and saved to {output_file}")
