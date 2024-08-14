@@ -1,7 +1,12 @@
-from typing import List, Tuple, Optional
+from collections import OrderedDict
+from typing import List, Optional, Tuple
+
 import networkx as nx
-from rdkit import Chem
+import numpy as np
+from rdkit import AllChem, Chem
 from rdkit.Chem.Descriptors import ExactMolWt
+
+from polymetrix.core.utils import make_linearpolymer
 
 
 class Polymer:
@@ -14,18 +19,6 @@ class Polymer:
 
     @classmethod
     def from_psmiles(cls, psmiles: str) -> "Polymer":
-        """
-        Create a Polymer instance from a pSMILES string.
-
-        Args:
-            psmiles (str): The pSMILES representation of the polymer.
-
-        Returns:
-            Polymer: A new Polymer instance.
-
-        Raises:
-            ValueError: If the pSMILES string is invalid.
-        """
         polymer = cls()
         polymer.psmiles = psmiles
         return polymer
@@ -48,7 +41,6 @@ class Polymer:
             raise ValueError(f"Error processing pSMILES: {str(e)}") from e
 
     def _mol_to_nx(self, mol: Chem.Mol) -> nx.Graph:
-        """Convert an RDKit molecule to a NetworkX graph."""
         G = nx.Graph()
         for atom in mol.GetAtoms():
             G.add_node(
@@ -63,7 +55,6 @@ class Polymer:
         return G
 
     def _identify_connection_points(self):
-        """Identify connection points (asterisks) in the polymer graph."""
         self._connection_points = [
             node
             for node, data in self._graph.nodes(data=True)
@@ -71,7 +62,6 @@ class Polymer:
         ]
 
     def _identify_backbone_and_sidechain(self):
-        """Identify backbone and sidechain nodes in the polymer graph."""
         self._backbone_nodes, self._sidechain_nodes = classify_backbone_and_sidechains(
             self._graph
         )
@@ -91,14 +81,7 @@ class Polymer:
     def get_backbone_and_sidechain_molecules(
         self,
     ) -> Tuple[List[Chem.Mol], List[Chem.Mol]]:
-        """
-        Get RDKit molecules representing the backbone and sidechains.
-
-        Returns:
-            Tuple[List[Chem.Mol], List[Chem.Mol]]: Lists of backbone and sidechain molecules.
-        """
-        backbone_mol = self._subgraph_to_mol(
-            self._graph.subgraph(self._backbone_nodes))
+        backbone_mol = self._subgraph_to_mol(self._graph.subgraph(self._backbone_nodes))
         sidechain_mols = [
             self._subgraph_to_mol(self._graph.subgraph(nodes))
             for nodes in nx.connected_components(
@@ -108,12 +91,6 @@ class Polymer:
         return [backbone_mol], sidechain_mols
 
     def get_backbone_and_sidechain_graphs(self) -> Tuple[nx.Graph, List[nx.Graph]]:
-        """
-        Get NetworkX graphs representing the backbone and sidechains.
-
-        Returns:
-            Tuple[nx.Graph, List[nx.Graph]]: The backbone graph and a list of sidechain graphs.
-        """
         backbone_graph = self._graph.subgraph(self._backbone_nodes)
         sidechain_graphs = [
             self._graph.subgraph(nodes)
@@ -124,7 +101,6 @@ class Polymer:
         return [backbone_graph], sidechain_graphs
 
     def _subgraph_to_mol(self, subgraph: nx.Graph) -> Chem.Mol:
-        """Convert a NetworkX subgraph back to an RDKit molecule."""
         mol = Chem.RWMol()
         node_to_idx = {}
         for node in subgraph.nodes():
@@ -136,23 +112,79 @@ class Polymer:
         return mol.GetMol()
 
     def calculate_molecular_weight(self) -> float:
-        """
-        Calculate the molecular weight of the polymer.
-
-        Returns:
-            float: The molecular weight of the polymer.
-        """
         mol = Chem.MolFromSmiles(self._psmiles)
         return ExactMolWt(mol)
 
     def get_connection_points(self) -> List[int]:
-        """
-        Get the connection points of the polymer.
-
-        Returns:
-            List[int]: The node indices of the connection points.
-        """
         return self._connection_points
+
+    def generate_conformers(
+        self,
+        mol,
+        num_confs=500,
+        seed=100,
+        max_iters=1000,
+        num_threads=5,
+        prune_rms_thresh=0.5,
+        non_bonded_thresh=100.0,
+    ):
+        params = AllChem.ETKDGv3()
+        params.useSmallRingTorsions = True
+        molecule = Chem.AddHs(mol)
+        conformers = AllChem.EmbedMultipleConfs(
+            molecule,
+            numConfs=num_confs,
+            randomSeed=seed,
+            pruneRmsThresh=prune_rms_thresh,
+            numThreads=num_threads,
+        )
+        try:
+            optimised_and_energies = AllChem.MMFFOptimizeMoleculeConfs(
+                molecule,
+                maxIters=max_iters,
+                numThreads=num_threads,
+                nonBondedThresh=non_bonded_thresh,
+            )
+        except Exception as e:
+            print(f"Optimization failed: {e}")
+            return []
+        energy_dict = {
+            conf: energy
+            for conf, (optimized, energy) in zip(conformers, optimised_and_energies)
+            if optimized == 0
+        }
+        if not energy_dict:
+            return []
+        molecule = AllChem.RemoveHs(molecule)
+        matches = molecule.GetSubstructMatches(molecule, uniquify=False)
+        maps = [list(enumerate(match)) for match in matches]
+        final_conformers = OrderedDict()
+        for conf_id, energy in sorted(energy_dict.items(), key=lambda x: x[1]):
+            if all(
+                AllChem.GetBestRMS(molecule, molecule, ref_id, conf_id, maps) >= 1.0
+                for ref_id in final_conformers
+            ):
+                final_conformers[conf_id] = energy
+        return list(final_conformers.values())
+
+    def calc_nconf20(self, energy_list):
+        if not energy_list:
+            return 1
+        energy_array = np.array(energy_list)
+        relative_energies = energy_array - energy_array[0]
+        return np.count_nonzero((relative_energies >= 0) & (relative_energies < 20))
+
+    def n_conf20(self, degree=2, num_confs=500, seed=100):
+        try:
+            deg_smiles = polymer_from_smiles(self._psmiles, degree)
+            mol = Chem.MolFromSmiles(deg_smiles)
+            if mol is None:
+                return np.nan
+            energy_list = self.generate_conformers(mol, num_confs=num_confs, seed=seed)
+            return self.calc_nconf20(energy_list)
+        except Exception as e:
+            print(f"Failed to compute descriptor for {self._psmiles}: {e}")
+            return np.nan
 
 
 # Helper functions for backbone/sidechain classification
@@ -174,31 +206,15 @@ def find_shortest_paths_between_stars(graph):
 
 
 def find_cycles_including_paths(graph, paths):
-    """Find cycles in a graph that include given paths.
-
-    Args:
-        graph (networkx.Graph): A NetworkX graph.
-        paths (list): A list of paths.
-
-    Returns:
-        list: A list of cycles that include the given paths.
-    """
-    # Compute all cycles in the graph once
     all_cycles = nx.cycle_basis(graph)
     path_nodes = {node for path in paths for node in path}
-
-    # Filter cycles that include any node from the paths
     cycles_including_paths = [
         cycle for cycle in all_cycles if any(node in path_nodes for node in cycle)
     ]
-
-    # Sort and remove duplicates from cycles
     unique_cycles = {
-        tuple(sorted((min(c), max(c))
-              for c in zip(cycle, cycle[1:] + [cycle[0]])))
+        tuple(sorted((min(c), max(c)) for c in zip(cycle, cycle[1:] + [cycle[0]])))
         for cycle in cycles_including_paths
     }
-
     return [list(cycle) for cycle in unique_cycles]
 
 
@@ -220,8 +236,10 @@ def classify_backbone_and_sidechains(graph):
             backbone_nodes.update(edge)
     for path in shortest_paths:
         backbone_nodes.update(path)
-    backbone_nodes = add_degree_one_nodes_to_backbone(
-        graph, list(backbone_nodes))
-    sidechain_nodes = [
-        node for node in graph.nodes if node not in backbone_nodes]
+    backbone_nodes = add_degree_one_nodes_to_backbone(graph, list(backbone_nodes))
+    sidechain_nodes = [node for node in graph.nodes if node not in backbone_nodes]
     return list(set(backbone_nodes)), sidechain_nodes
+
+
+def polymer_from_smiles(psmiles, degree=2):
+    return make_linearpolymer(psmiles, degree)
