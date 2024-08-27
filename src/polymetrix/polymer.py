@@ -6,8 +6,6 @@ import numpy as np
 from rdkit import AllChem, Chem
 from rdkit.Chem.Descriptors import ExactMolWt
 
-from polymetrix.core.utils import make_linearpolymer
-
 
 class Polymer:
     def __init__(self):
@@ -81,7 +79,8 @@ class Polymer:
     def get_backbone_and_sidechain_molecules(
         self,
     ) -> Tuple[List[Chem.Mol], List[Chem.Mol]]:
-        backbone_mol = self._subgraph_to_mol(self._graph.subgraph(self._backbone_nodes))
+        backbone_mol = self._subgraph_to_mol(
+            self._graph.subgraph(self._backbone_nodes))
         sidechain_mols = [
             self._subgraph_to_mol(self._graph.subgraph(nodes))
             for nodes in nx.connected_components(
@@ -118,74 +117,6 @@ class Polymer:
     def get_connection_points(self) -> List[int]:
         return self._connection_points
 
-    def generate_conformers(
-        self,
-        mol,
-        num_confs=500,
-        seed=100,
-        max_iters=1000,
-        num_threads=5,
-        prune_rms_thresh=0.5,
-        non_bonded_thresh=100.0,
-    ):
-        params = AllChem.ETKDGv3()
-        params.useSmallRingTorsions = True
-        molecule = Chem.AddHs(mol)
-        conformers = AllChem.EmbedMultipleConfs(
-            molecule,
-            numConfs=num_confs,
-            randomSeed=seed,
-            pruneRmsThresh=prune_rms_thresh,
-            numThreads=num_threads,
-        )
-        try:
-            optimised_and_energies = AllChem.MMFFOptimizeMoleculeConfs(
-                molecule,
-                maxIters=max_iters,
-                numThreads=num_threads,
-                nonBondedThresh=non_bonded_thresh,
-            )
-        except Exception as e:
-            print(f"Optimization failed: {e}")
-            return []
-        energy_dict = {
-            conf: energy
-            for conf, (optimized, energy) in zip(conformers, optimised_and_energies)
-            if optimized == 0
-        }
-        if not energy_dict:
-            return []
-        molecule = AllChem.RemoveHs(molecule)
-        matches = molecule.GetSubstructMatches(molecule, uniquify=False)
-        maps = [list(enumerate(match)) for match in matches]
-        final_conformers = OrderedDict()
-        for conf_id, energy in sorted(energy_dict.items(), key=lambda x: x[1]):
-            if all(
-                AllChem.GetBestRMS(molecule, molecule, ref_id, conf_id, maps) >= 1.0
-                for ref_id in final_conformers
-            ):
-                final_conformers[conf_id] = energy
-        return list(final_conformers.values())
-
-    def calc_nconf20(self, energy_list):
-        if not energy_list:
-            return 1
-        energy_array = np.array(energy_list)
-        relative_energies = energy_array - energy_array[0]
-        return np.count_nonzero((relative_energies >= 0) & (relative_energies < 20))
-
-    def n_conf20(self, degree=2, num_confs=500, seed=100):
-        try:
-            deg_smiles = polymer_from_smiles(self._psmiles, degree)
-            mol = Chem.MolFromSmiles(deg_smiles)
-            if mol is None:
-                return np.nan
-            energy_list = self.generate_conformers(mol, num_confs=num_confs, seed=seed)
-            return self.calc_nconf20(energy_list)
-        except Exception as e:
-            print(f"Failed to compute descriptor for {self._psmiles}: {e}")
-            return np.nan
-
 
 # Helper functions for backbone/sidechain classification
 def find_shortest_paths_between_stars(graph):
@@ -212,7 +143,8 @@ def find_cycles_including_paths(graph, paths):
         cycle for cycle in all_cycles if any(node in path_nodes for node in cycle)
     ]
     unique_cycles = {
-        tuple(sorted((min(c), max(c)) for c in zip(cycle, cycle[1:] + [cycle[0]])))
+        tuple(sorted((min(c), max(c))
+              for c in zip(cycle, cycle[1:] + [cycle[0]])))
         for cycle in cycles_including_paths
     }
     return [list(cycle) for cycle in unique_cycles]
@@ -236,10 +168,8 @@ def classify_backbone_and_sidechains(graph):
             backbone_nodes.update(edge)
     for path in shortest_paths:
         backbone_nodes.update(path)
-    backbone_nodes = add_degree_one_nodes_to_backbone(graph, list(backbone_nodes))
-    sidechain_nodes = [node for node in graph.nodes if node not in backbone_nodes]
+    backbone_nodes = add_degree_one_nodes_to_backbone(
+        graph, list(backbone_nodes))
+    sidechain_nodes = [
+        node for node in graph.nodes if node not in backbone_nodes]
     return list(set(backbone_nodes)), sidechain_nodes
-
-
-def polymer_from_smiles(psmiles, degree=2):
-    return make_linearpolymer(psmiles, degree)

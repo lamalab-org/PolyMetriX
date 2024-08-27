@@ -10,7 +10,8 @@ class BaseFeatureCalculator:
         self.agg = agg
 
     def calculate(self, mol: Chem.Mol) -> np.ndarray:
-        raise NotImplementedError("Calculate method must be implemented by subclasses")
+        raise NotImplementedError(
+            "Calculate method must be implemented by subclasses")
 
     def feature_base_labels(self) -> List[str]:
         raise NotImplementedError(
@@ -107,21 +108,13 @@ class NumAromaticRings(BaseFeatureCalculator):
         return ["num_aromatic_rings"]
 
 
-class NumConformersWithin20kcal(BaseFeatureCalculator):
-    def calculate(self, mol: Chem.Mol) -> np.ndarray:
-        polymer = Polymer.from_psmiles(Chem.MolToSmiles(mol))
-        return np.array([polymer.n_conf20()])
-
-    def feature_base_labels(self) -> List[str]:
-        return ["num_conformers_within_20kcal"]
-
-
 class PolymerPartFeaturizer:
     def __init__(self, calculator: BaseFeatureCalculator):
         self.calculator = calculator
 
     def featurize(self, polymer) -> np.ndarray:
-        raise NotImplementedError("Featurize method must be implemented by subclasses")
+        raise NotImplementedError(
+            "Featurize method must be implemented by subclasses")
 
     def feature_labels(self) -> List[str]:
         return [
