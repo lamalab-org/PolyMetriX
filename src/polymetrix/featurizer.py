@@ -2,7 +2,6 @@ from typing import List
 import numpy as np
 from rdkit import Chem
 from rdkit.Chem import Descriptors
-from polymetrix.polymer import Polymer
 
 
 class BaseFeatureCalculator:
@@ -76,7 +75,9 @@ class NumRotatableBonds(BaseFeatureCalculator):
 
 class NumRings(BaseFeatureCalculator):
     def calculate(self, mol: Chem.Mol) -> np.ndarray:
-        return np.array([Chem.GetSSSR(mol)])
+        ring_info = mol.GetRingInfo()
+        num_rings = len(ring_info.AtomRings())
+        return np.array([num_rings])
 
     def feature_base_labels(self) -> List[str]:
         return ["num_rings"]

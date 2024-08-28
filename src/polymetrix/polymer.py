@@ -3,7 +3,8 @@ from typing import List, Optional, Tuple
 
 import networkx as nx
 import numpy as np
-from rdkit import AllChem, Chem
+from rdkit.Chem import AllChem
+from rdkit import Chem
 from rdkit.Chem.Descriptors import ExactMolWt
 
 
@@ -117,6 +118,15 @@ class Polymer:
     def get_connection_points(self) -> List[int]:
         return self._connection_points
 
+    def number_and_length_of_sidechains_and_backbones(self):
+        backbone_bridges, sidechain_bridges = get_real_backbone_and_sidechain_bridges(
+            self._graph, self._backbone_nodes, self._sidechain_nodes
+        )
+        sidechains, backbones = number_and_length_of_sidechains_and_backbones(
+            sidechain_bridges, backbone_bridges
+        )
+        return sidechains, backbones
+
 
 # Helper functions for backbone/sidechain classification
 def find_shortest_paths_between_stars(graph):
@@ -173,3 +183,23 @@ def classify_backbone_and_sidechains(graph):
     sidechain_nodes = [
         node for node in graph.nodes if node not in backbone_nodes]
     return list(set(backbone_nodes)), sidechain_nodes
+
+
+def get_real_backbone_and_sidechain_bridges(graph, backbone_nodes, sidechain_nodes):
+    backbone_bridges = []
+    sidechain_bridges = []
+    for edge in graph.edges:
+        start_node, end_node = edge
+        if start_node in backbone_nodes and end_node in backbone_nodes:
+            backbone_bridges.append(edge)
+        elif start_node in sidechain_nodes or end_node in sidechain_nodes:
+            sidechain_bridges.append(edge)
+    return backbone_bridges, sidechain_bridges
+
+
+def number_and_length_of_sidechains_and_backbones(sidechain_bridges, backbone_bridges):
+    sidechain_graph = nx.Graph(sidechain_bridges)
+    backbone_graph = nx.Graph(backbone_bridges)
+    sidechains = list(nx.connected_components(sidechain_graph))
+    backbones = list(nx.connected_components(backbone_graph))
+    return sidechains, backbones
