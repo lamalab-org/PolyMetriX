@@ -8,7 +8,7 @@ from rdkit.Chem import AllChem, Descriptors
 from collections import OrderedDict
 from pandarallel import pandarallel
 import networkx as nx
-from polymetrx.core.utils import make_linearpolymer
+from polymetrix.core.utils import make_linearpolymer
 
 
 def mol_from_smiles(psmiles):

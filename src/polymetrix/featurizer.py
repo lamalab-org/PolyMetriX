@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Optional
 import numpy as np
 from rdkit import Chem
 from rdkit.Chem import Descriptors
@@ -82,6 +82,12 @@ class NumRings(BaseFeatureCalculator):
     def feature_base_labels(self) -> List[str]:
         return ["num_rings"]
 
+class NumAtoms(BaseFeatureCalculator):
+    def calculate(self, mol: Chem.Mol) -> np.ndarray:
+        return np.array(mol.GetNumAtoms())
+
+    def feature_base_labels(self) -> List[str]:
+        return ['num_atoms']
 
 class NumNonAromaticRings(BaseFeatureCalculator):
     def calculate(self, mol: Chem.Mol) -> np.ndarray:
@@ -110,7 +116,7 @@ class NumAromaticRings(BaseFeatureCalculator):
 
 
 class PolymerPartFeaturizer:
-    def __init__(self, calculator: BaseFeatureCalculator):
+    def __init__(self, calculator: Optional[BaseFeatureCalculator] = None):
         self.calculator = calculator
 
     def featurize(self, polymer) -> np.ndarray:
@@ -127,9 +133,13 @@ class PolymerPartFeaturizer:
 class SideChainFeaturizer(PolymerPartFeaturizer):
     def featurize(self, polymer) -> np.ndarray:
         sidechain_mols = polymer.get_backbone_and_sidechain_molecules()[1]
-        features = [self.calculator.calculate(mol) for mol in sidechain_mols]
+        features = [self.calculator.calculate(mol).reshape(-1,1) for mol in sidechain_mols]
         return self.calculator.aggregate(np.concatenate(features))
 
+class NumSideChainFeaturizer(PolymerPartFeaturizer):
+    def featurize(self, polymer) -> np.ndarray:
+        sidechain_mols = polymer.get_backbone_and_sidechain_molecules()[1]
+        return np.array([len(sidechain_mols)])
 
 class BackBoneFeaturizer(PolymerPartFeaturizer):
     def featurize(self, polymer) -> np.ndarray:

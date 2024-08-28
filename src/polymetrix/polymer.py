@@ -203,3 +203,4 @@ def number_and_length_of_sidechains_and_backbones(sidechain_bridges, backbone_br
     sidechains = list(nx.connected_components(sidechain_graph))
     backbones = list(nx.connected_components(backbone_graph))
     return sidechains, backbones
+
