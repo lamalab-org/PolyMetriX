@@ -3,7 +3,8 @@ from typing import List, Optional, Tuple
 
 import networkx as nx
 import numpy as np
-from rdkit import AllChem, Chem
+from rdkit import Chem
+from rdkit.Chem import AllChem
 from rdkit.Chem.Descriptors import ExactMolWt
 
 

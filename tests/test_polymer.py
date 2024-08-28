@@ -47,6 +47,24 @@ def test_get_backbone_and_sidechain_graphs():
     assert isinstance(sidechains[0], nx.Graph)
 
 
+def test_multiple_sidechains():
+    polymer = Polymer.from_psmiles('*c1ccc(Oc2ccc(-c3nc4cc(Oc5ccc(NC(=O)c6cc(C(=O)Nc7ccc(Oc8ccc9nc(-c%10ccccc%10)c(*)nc9c8)cc7)cc(N7C(=O)c8ccccc8C7=O)c6)cc5)ccc4nc3-c3ccccc3)cc2)cc1')
+    backbones, sidechains = polymer.get_backbone_and_sidechain_graphs()
+    assert len(backbones) == 1
+    assert len(sidechains) == 3
+
+    backbone_molecules, sidechains_molecules = polymer.get_backbone_and_sidechain_molecules()
+    assert len(backbone_molecules) == 1
+    assert len(sidechains_molecules) == 3
+
+    original_number_of_atoms = len(polymer.graph)
+    sidechain_smiles = [
+        Chem.MolToSmiles(sidechain_mol) for sidechain_mol in sidechains_molecules
+    ]
+    assert set(sidechain_smiles) == {'c1ccccc1', 'O=C1NC(=O)c2ccccc21'}
+    assert original_number_of_atoms == len(backbones[0]) + sum([len(sidechain) for sidechain in sidechains])
+
+
 def test_calculate_molecular_weight():
     polymer = Polymer.from_psmiles("*C1CCC(*)C1")
     mw = polymer.calculate_molecular_weight()
