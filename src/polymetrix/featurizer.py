@@ -84,7 +84,7 @@ class NumRings(BaseFeatureCalculator):
 
 class NumAtoms(BaseFeatureCalculator):
     def calculate(self, mol: Chem.Mol) -> np.ndarray:
-        return np.array(mol.GetNumAtoms())
+        return np.array([mol.GetNumAtoms()])
 
     def feature_base_labels(self) -> List[str]:
         return ["num_atoms"]
@@ -235,6 +235,16 @@ class SideChainFeaturizer(PolymerPartFeaturizer):
         ]
         return self.calculator.aggregate(np.concatenate(features))
 
+    def feature_labels(self) -> List[str]:
+        if self.calculator:
+            return [
+                f"{label}_{self.__class__.__name__.lower()}_{agg}"
+                for label in self.calculator.feature_base_labels()
+                for agg in self.calculator.agg
+            ]
+        else:
+            return [self.__class__.__name__.lower()]
+
 
 class NumSideChainFeaturizer(PolymerPartFeaturizer):
     def featurize(self, polymer) -> np.ndarray:
@@ -258,15 +268,6 @@ class FullPolymerFeaturizer(PolymerPartFeaturizer):
     def featurize(self, polymer) -> np.ndarray:
         mol = Chem.MolFromSmiles(polymer.psmiles)
         return self.calculator.calculate(mol)
-
-    def feature_labels(self) -> List[str]:
-        if self.calculator:
-            return [
-                f"{label}_{self.__class__.__name__.lower()}"
-                for label in self.calculator.feature_base_labels()
-            ]
-        else:
-            return [self.__class__.__name__.lower()]
 
 
 class MultipleFeaturizer:
