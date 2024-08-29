@@ -178,6 +178,23 @@ class MolecularWeightFeaturizer(BaseFeatureCalculator):
 
     def feature_base_labels(self) -> List[str]:
         return ["molecular_weight"]
+    
+
+class Sp3CarbonCountFeaturizer(BaseFeatureCalculator):
+    def calculate(self, mol: Chem.Mol) -> np.ndarray:
+        sp3_count = sum(1 for atom in mol.GetAtoms() if atom.GetHybridization() == Chem.HybridizationType.SP3)
+        return np.array([sp3_count])
+
+    def feature_base_labels(self) -> List[str]:
+        return ["sp3_carbon_count"]
+
+class Sp2CarbonCountFeaturizer(BaseFeatureCalculator):
+    def calculate(self, mol: Chem.Mol) -> np.ndarray:
+        sp2_count = sum(1 for atom in mol.GetAtoms() if atom.GetHybridization() == Chem.HybridizationType.SP2)
+        return np.array([sp2_count])
+
+    def feature_base_labels(self) -> List[str]:
+        return ["sp2_carbon_count"]
 
 
 class PolymerPartFeaturizer:
