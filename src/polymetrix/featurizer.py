@@ -178,19 +178,28 @@ class MolecularWeightFeaturizer(BaseFeatureCalculator):
 
     def feature_base_labels(self) -> List[str]:
         return ["molecular_weight"]
-    
+
 
 class Sp3CarbonCountFeaturizer(BaseFeatureCalculator):
     def calculate(self, mol: Chem.Mol) -> np.ndarray:
-        sp3_count = sum(1 for atom in mol.GetAtoms() if atom.GetHybridization() == Chem.HybridizationType.SP3)
+        sp3_count = sum(
+            1
+            for atom in mol.GetAtoms()
+            if atom.GetHybridization() == Chem.HybridizationType.SP3
+        )
         return np.array([sp3_count])
 
     def feature_base_labels(self) -> List[str]:
         return ["sp3_carbon_count"]
 
+
 class Sp2CarbonCountFeaturizer(BaseFeatureCalculator):
     def calculate(self, mol: Chem.Mol) -> np.ndarray:
-        sp2_count = sum(1 for atom in mol.GetAtoms() if atom.GetHybridization() == Chem.HybridizationType.SP2)
+        sp2_count = sum(
+            1
+            for atom in mol.GetAtoms()
+            if atom.GetHybridization() == Chem.HybridizationType.SP2
+        )
         return np.array([sp2_count])
 
     def feature_base_labels(self) -> List[str]:
@@ -217,6 +226,10 @@ class PolymerPartFeaturizer:
 class SideChainFeaturizer(PolymerPartFeaturizer):
     def featurize(self, polymer) -> np.ndarray:
         sidechain_mols = polymer.get_backbone_and_sidechain_molecules()[1]
+        if not sidechain_mols:
+            return np.zeros(
+                len(self.calculator.feature_base_labels()) * len(self.calculator.agg)
+            )
         features = [
             self.calculator.calculate(mol).reshape(-1, 1) for mol in sidechain_mols
         ]
@@ -264,16 +277,10 @@ class MultipleFeaturizer:
         features = []
         for featurizer in self.featurizers:
             feature = featurizer.featurize(polymer)
-            if feature.ndim == 0:
+            if isinstance(feature, (int, float)):
                 feature = np.array([feature])
             features.append(feature.flatten())
         return np.concatenate(features)
-
-    def feature_labels(self) -> List[str]:
-        labels = []
-        for featurizer in self.featurizers:
-            labels.extend(featurizer.feature_labels())
-        return labels
 
     def feature_labels(self) -> List[str]:
         labels = []
