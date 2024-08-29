@@ -1,7 +1,7 @@
 from typing import List, Optional
 import numpy as np
 from rdkit import Chem
-from rdkit.Chem import Descriptors
+from rdkit.Chem import Descriptors, GraphDescriptors
 
 
 class BaseFeatureCalculator:
@@ -9,8 +9,7 @@ class BaseFeatureCalculator:
         self.agg = agg
 
     def calculate(self, mol: Chem.Mol) -> np.ndarray:
-        raise NotImplementedError(
-            "Calculate method must be implemented by subclasses")
+        raise NotImplementedError("Calculate method must be implemented by subclasses")
 
     def feature_base_labels(self) -> List[str]:
         raise NotImplementedError(
@@ -82,12 +81,14 @@ class NumRings(BaseFeatureCalculator):
     def feature_base_labels(self) -> List[str]:
         return ["num_rings"]
 
+
 class NumAtoms(BaseFeatureCalculator):
     def calculate(self, mol: Chem.Mol) -> np.ndarray:
         return np.array(mol.GetNumAtoms())
 
     def feature_base_labels(self) -> List[str]:
-        return ['num_atoms']
+        return ["num_atoms"]
+
 
 class NumNonAromaticRings(BaseFeatureCalculator):
     def calculate(self, mol: Chem.Mol) -> np.ndarray:
@@ -115,31 +116,101 @@ class NumAromaticRings(BaseFeatureCalculator):
         return ["num_aromatic_rings"]
 
 
+class TopologicalSurfaceArea(BaseFeatureCalculator):
+    def calculate(self, mol: Chem.Mol) -> np.ndarray:
+        return np.array([Descriptors.TPSA(mol)])
+
+    def feature_base_labels(self) -> List[str]:
+        return ["topological_surface_area"]
+
+
+class FractionBicyclicRings(BaseFeatureCalculator):
+    def calculate(self, mol: Chem.Mol) -> np.ndarray:
+        ring_info = mol.GetRingInfo()
+        atom_rings = ring_info.AtomRings()
+        bicyclic_count = 0
+
+        for i, ring1 in enumerate(atom_rings):
+            for ring2 in atom_rings[i + 1 :]:
+                if set(ring1).intersection(set(ring2)):
+                    bicyclic_count += 1
+                    break  # Count each bicyclic structure only once
+
+        total_rings = len(atom_rings)
+        fraction_bicyclic = bicyclic_count / total_rings if total_rings > 0 else 0
+        return np.array([fraction_bicyclic])
+
+    def feature_base_labels(self) -> List[str]:
+        return ["fraction_bicyclic_rings"]
+
+
+class NumAliphaticHeterocycles(BaseFeatureCalculator):
+    def calculate(self, mol: Chem.Mol) -> np.ndarray:
+        num_heterocycles = 0
+        for ring in mol.GetRingInfo().AtomRings():
+            if any(mol.GetAtomWithIdx(atom).GetAtomicNum() != 6 for atom in ring):
+                num_heterocycles += 1
+        return np.array([num_heterocycles])
+
+    def feature_base_labels(self) -> List[str]:
+        return ["num_aliphatic_heterocycles"]
+
+
+class SlogPVSA1(BaseFeatureCalculator):
+    def calculate(self, mol: Chem.Mol) -> np.ndarray:
+        return np.array([Descriptors.SlogP_VSA1(mol)])
+
+    def feature_base_labels(self) -> List[str]:
+        return ["slogp_vsa1"]
+
+
+class BalabanJIndex(BaseFeatureCalculator):
+    def calculate(self, mol: Chem.Mol) -> np.ndarray:
+        return np.array([GraphDescriptors.BalabanJ(mol)])
+
+    def feature_base_labels(self) -> List[str]:
+        return ["balaban_j_index"]
+
+
+class MolecularWeightFeaturizer(BaseFeatureCalculator):
+    def calculate(self, mol: Chem.Mol) -> np.ndarray:
+        return np.array([Descriptors.ExactMolWt(mol)])
+
+    def feature_base_labels(self) -> List[str]:
+        return ["molecular_weight"]
+
+
 class PolymerPartFeaturizer:
     def __init__(self, calculator: Optional[BaseFeatureCalculator] = None):
         self.calculator = calculator
 
     def featurize(self, polymer) -> np.ndarray:
-        raise NotImplementedError(
-            "Featurize method must be implemented by subclasses")
+        raise NotImplementedError("Featurize method must be implemented by subclasses")
 
     def feature_labels(self) -> List[str]:
-        return [
-            f"{label}_{self.__class__.__name__.lower()}"
-            for label in self.calculator.feature_labels()
-        ]
+        if self.calculator:
+            return [
+                f"{label}_{self.__class__.__name__.lower()}"
+                for label in self.calculator.feature_base_labels()
+            ]
+        else:
+            return [self.__class__.__name__.lower()]
 
 
 class SideChainFeaturizer(PolymerPartFeaturizer):
     def featurize(self, polymer) -> np.ndarray:
         sidechain_mols = polymer.get_backbone_and_sidechain_molecules()[1]
-        features = [self.calculator.calculate(mol).reshape(-1,1) for mol in sidechain_mols]
+        features = [
+            self.calculator.calculate(mol).reshape(-1, 1) for mol in sidechain_mols
+        ]
         return self.calculator.aggregate(np.concatenate(features))
+
 
 class NumSideChainFeaturizer(PolymerPartFeaturizer):
     def featurize(self, polymer) -> np.ndarray:
         sidechain_mols = polymer.get_backbone_and_sidechain_molecules()[1]
         return np.array([len(sidechain_mols)])
+
 
 class BackBoneFeaturizer(PolymerPartFeaturizer):
     def featurize(self, polymer) -> np.ndarray:
@@ -147,10 +218,25 @@ class BackBoneFeaturizer(PolymerPartFeaturizer):
         return self.calculator.calculate(backbone_mol)
 
 
+class NumBackBoneFeaturizer(PolymerPartFeaturizer):
+    def featurize(self, polymer) -> np.ndarray:
+        backbone_mols = polymer.get_backbone_and_sidechain_molecules()[0]
+        return np.array([len(backbone_mols)])
+
+
 class FullPolymerFeaturizer(PolymerPartFeaturizer):
     def featurize(self, polymer) -> np.ndarray:
         mol = Chem.MolFromSmiles(polymer.psmiles)
         return self.calculator.calculate(mol)
+
+    def feature_labels(self) -> List[str]:
+        if self.calculator:
+            return [
+                f"{label}_{self.__class__.__name__.lower()}"
+                for label in self.calculator.feature_base_labels()
+            ]
+        else:
+            return [self.__class__.__name__.lower()]
 
 
 class MultipleFeaturizer:
@@ -160,8 +246,17 @@ class MultipleFeaturizer:
     def featurize(self, polymer) -> np.ndarray:
         features = []
         for featurizer in self.featurizers:
-            features.append(featurizer.featurize(polymer))
+            feature = featurizer.featurize(polymer)
+            if feature.ndim == 0:
+                feature = np.array([feature])
+            features.append(feature.flatten())
         return np.concatenate(features)
+
+    def feature_labels(self) -> List[str]:
+        labels = []
+        for featurizer in self.featurizers:
+            labels.extend(featurizer.feature_labels())
+        return labels
 
     def feature_labels(self) -> List[str]:
         labels = []
@@ -172,11 +267,13 @@ class MultipleFeaturizer:
     def citations(self) -> List[str]:
         citations = []
         for featurizer in self.featurizers:
-            citations.extend(featurizer.calculator.citations())
+            if hasattr(featurizer, "calculator") and featurizer.calculator:
+                citations.extend(featurizer.calculator.citations())
         return list(set(citations))
 
     def implementors(self) -> List[str]:
         implementors = []
         for featurizer in self.featurizers:
-            implementors.extend(featurizer.calculator.implementors())
+            if hasattr(featurizer, "calculator") and featurizer.calculator:
+                implementors.extend(featurizer.calculator.implementors())
         return list(set(implementors))

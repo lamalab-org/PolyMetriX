@@ -80,8 +80,7 @@ class Polymer:
     def get_backbone_and_sidechain_molecules(
         self,
     ) -> Tuple[List[Chem.Mol], List[Chem.Mol]]:
-        backbone_mol = self._subgraph_to_mol(
-            self._graph.subgraph(self._backbone_nodes))
+        backbone_mol = self._subgraph_to_mol(self._graph.subgraph(self._backbone_nodes))
         sidechain_mols = [
             self._subgraph_to_mol(self._graph.subgraph(nodes))
             for nodes in nx.connected_components(
@@ -118,15 +117,6 @@ class Polymer:
     def get_connection_points(self) -> List[int]:
         return self._connection_points
 
-    def number_and_length_of_sidechains_and_backbones(self):
-        backbone_bridges, sidechain_bridges = get_real_backbone_and_sidechain_bridges(
-            self._graph, self._backbone_nodes, self._sidechain_nodes
-        )
-        sidechains, backbones = number_and_length_of_sidechains_and_backbones(
-            sidechain_bridges, backbone_bridges
-        )
-        return sidechains, backbones
-
 
 # Helper functions for backbone/sidechain classification
 def find_shortest_paths_between_stars(graph):
@@ -153,8 +143,7 @@ def find_cycles_including_paths(graph, paths):
         cycle for cycle in all_cycles if any(node in path_nodes for node in cycle)
     ]
     unique_cycles = {
-        tuple(sorted((min(c), max(c))
-              for c in zip(cycle, cycle[1:] + [cycle[0]])))
+        tuple(sorted((min(c), max(c)) for c in zip(cycle, cycle[1:] + [cycle[0]])))
         for cycle in cycles_including_paths
     }
     return [list(cycle) for cycle in unique_cycles]
@@ -178,29 +167,6 @@ def classify_backbone_and_sidechains(graph):
             backbone_nodes.update(edge)
     for path in shortest_paths:
         backbone_nodes.update(path)
-    backbone_nodes = add_degree_one_nodes_to_backbone(
-        graph, list(backbone_nodes))
-    sidechain_nodes = [
-        node for node in graph.nodes if node not in backbone_nodes]
+    backbone_nodes = add_degree_one_nodes_to_backbone(graph, list(backbone_nodes))
+    sidechain_nodes = [node for node in graph.nodes if node not in backbone_nodes]
     return list(set(backbone_nodes)), sidechain_nodes
-
-
-def get_real_backbone_and_sidechain_bridges(graph, backbone_nodes, sidechain_nodes):
-    backbone_bridges = []
-    sidechain_bridges = []
-    for edge in graph.edges:
-        start_node, end_node = edge
-        if start_node in backbone_nodes and end_node in backbone_nodes:
-            backbone_bridges.append(edge)
-        elif start_node in sidechain_nodes or end_node in sidechain_nodes:
-            sidechain_bridges.append(edge)
-    return backbone_bridges, sidechain_bridges
-
-
-def number_and_length_of_sidechains_and_backbones(sidechain_bridges, backbone_bridges):
-    sidechain_graph = nx.Graph(sidechain_bridges)
-    backbone_graph = nx.Graph(backbone_bridges)
-    sidechains = list(nx.connected_components(sidechain_graph))
-    backbones = list(nx.connected_components(backbone_graph))
-    return sidechains, backbones
-
