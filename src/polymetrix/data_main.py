@@ -33,6 +33,7 @@ import fire
 # Configuration
 PSMILES_COLUMN = "PSMILES"
 
+
 def create_featurizer():
     sidechain_length = SideChainFeaturizer(NumAtoms(agg=["sum", "mean", "max", "min"]))
     num_sidechains = NumSideChainFeaturizer()
@@ -82,6 +83,7 @@ def create_featurizer():
         ]
     )
 
+
 def calculate_features(psmiles, featurizer):
     try:
         polymer_instance = Polymer.from_psmiles(psmiles)
@@ -90,6 +92,7 @@ def calculate_features(psmiles, featurizer):
     except Exception as e:
         print(f"Error processing PSMILES {psmiles}: {str(e)}")
         return pd.Series([None] * len(featurizer.feature_labels()))
+
 
 def process_csv(input_file, output_file, psmiles_column):
     pandarallel.initialize(progress_bar=True)
@@ -109,16 +112,16 @@ def process_csv(input_file, output_file, psmiles_column):
     result_df.to_csv(output_file, index=False)
     print(f"Results saved to {output_file}")
 
+
 def main(input_path, output_path):
     if not os.path.exists(input_path):
         print(f"Input file not found: {input_path}")
         print("Current working directory:", os.getcwd())
-        print(
-            "Please make sure the input file exists and the input path is correct."
-        )
+        print("Please make sure the input file exists and the input path is correct.")
         return
 
     process_csv(input_path, output_path, PSMILES_COLUMN)
+
 
 if __name__ == "__main__":
     fire.Fire(main)
