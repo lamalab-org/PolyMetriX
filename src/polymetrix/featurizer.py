@@ -1,7 +1,8 @@
 from typing import List, Optional
 import numpy as np
 from rdkit import Chem
-from rdkit.Chem import Descriptors, GraphDescriptors
+from rdkit.Chem import Descriptors, GraphDescriptors, AllChem
+from polymetrix.polymer import Polymer
 
 
 class BaseFeatureCalculator:
@@ -84,7 +85,7 @@ class NumRings(BaseFeatureCalculator):
 
 class NumAtoms(BaseFeatureCalculator):
     def calculate(self, mol: Chem.Mol) -> np.ndarray:
-        return np.array(mol.GetNumAtoms())
+        return np.array([mol.GetNumAtoms()])
 
     def feature_base_labels(self) -> List[str]:
         return ["num_atoms"]
@@ -206,6 +207,30 @@ class Sp2CarbonCountFeaturizer(BaseFeatureCalculator):
         return ["sp2_carbon_count"]
 
 
+class MaxEStateIndex(BaseFeatureCalculator):
+    def calculate(self, mol: Chem.Mol) -> np.ndarray:
+        return np.array([Descriptors.MaxEStateIndex(mol)])
+
+    def feature_base_labels(self) -> List[str]:
+        return ["max_estate_index"]
+
+
+class SMR_VSA5(BaseFeatureCalculator):
+    def calculate(self, mol: Chem.Mol) -> np.ndarray:
+        return np.array([Descriptors.SMR_VSA5(mol)])
+
+    def feature_base_labels(self) -> List[str]:
+        return ["smr_vsa5"]
+
+
+class FpDensityMorgan1(BaseFeatureCalculator):
+    def calculate(self, mol: Chem.Mol) -> np.ndarray:
+        return np.array([Descriptors.FpDensityMorgan1(mol)])
+
+    def feature_base_labels(self) -> List[str]:
+        return ["fp_density_morgan1"]
+
+
 class PolymerPartFeaturizer:
     def __init__(self, calculator: Optional[BaseFeatureCalculator] = None):
         self.calculator = calculator
@@ -235,6 +260,16 @@ class SideChainFeaturizer(PolymerPartFeaturizer):
         ]
         return self.calculator.aggregate(np.concatenate(features))
 
+    def feature_labels(self) -> List[str]:
+        if self.calculator:
+            return [
+                f"{label}_{self.__class__.__name__.lower()}_{agg}"
+                for label in self.calculator.feature_base_labels()
+                for agg in self.calculator.agg
+            ]
+        else:
+            return [self.__class__.__name__.lower()]
+
 
 class NumSideChainFeaturizer(PolymerPartFeaturizer):
     def featurize(self, polymer) -> np.ndarray:
@@ -258,15 +293,6 @@ class FullPolymerFeaturizer(PolymerPartFeaturizer):
     def featurize(self, polymer) -> np.ndarray:
         mol = Chem.MolFromSmiles(polymer.psmiles)
         return self.calculator.calculate(mol)
-
-    def feature_labels(self) -> List[str]:
-        if self.calculator:
-            return [
-                f"{label}_{self.__class__.__name__.lower()}"
-                for label in self.calculator.feature_base_labels()
-            ]
-        else:
-            return [self.__class__.__name__.lower()]
 
 
 class MultipleFeaturizer:
