@@ -1,7 +1,8 @@
 from typing import List, Optional
 import numpy as np
 from rdkit import Chem
-from rdkit.Chem import Descriptors, GraphDescriptors
+from rdkit.Chem import Descriptors, GraphDescriptors, AllChem
+from polymetrix.polymer import Polymer
 
 
 class BaseFeatureCalculator:
@@ -204,6 +205,30 @@ class Sp2CarbonCountFeaturizer(BaseFeatureCalculator):
 
     def feature_base_labels(self) -> List[str]:
         return ["sp2_carbon_count"]
+
+
+class MaxEStateIndex(BaseFeatureCalculator):
+    def calculate(self, mol: Chem.Mol) -> np.ndarray:
+        return np.array([Descriptors.MaxEStateIndex(mol)])
+
+    def feature_base_labels(self) -> List[str]:
+        return ["max_estate_index"]
+
+
+class SMR_VSA5(BaseFeatureCalculator):
+    def calculate(self, mol: Chem.Mol) -> np.ndarray:
+        return np.array([Descriptors.SMR_VSA5(mol)])
+
+    def feature_base_labels(self) -> List[str]:
+        return ["smr_vsa5"]
+
+
+class FpDensityMorgan1(BaseFeatureCalculator):
+    def calculate(self, mol: Chem.Mol) -> np.ndarray:
+        return np.array([Descriptors.FpDensityMorgan1(mol)])
+
+    def feature_base_labels(self) -> List[str]:
+        return ["fp_density_morgan1"]
 
 
 class PolymerPartFeaturizer:

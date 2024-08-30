@@ -23,6 +23,9 @@ from polymetrix.featurizer import (
     MolecularWeightFeaturizer,
     Sp3CarbonCountFeaturizer,
     Sp2CarbonCountFeaturizer,
+    MaxEStateIndex,
+    SMR_VSA5,
+    FpDensityMorgan1,
 )
 import os
 
@@ -52,6 +55,9 @@ def create_featurizer():
     molecular_weight = FullPolymerFeaturizer(MolecularWeightFeaturizer())
     sp3_carbon_count = FullPolymerFeaturizer(Sp3CarbonCountFeaturizer())
     sp2_carbon_count = FullPolymerFeaturizer(Sp2CarbonCountFeaturizer())
+    max_estate_index = FullPolymerFeaturizer(MaxEStateIndex())
+    smr_vsa5 = FullPolymerFeaturizer(SMR_VSA5())
+    fp_density_morgan1 = FullPolymerFeaturizer(FpDensityMorgan1())
 
     return MultipleFeaturizer(
         [
@@ -73,6 +79,9 @@ def create_featurizer():
             molecular_weight,
             sp3_carbon_count,
             sp2_carbon_count,
+            max_estate_index,
+            smr_vsa5,
+            fp_density_morgan1,
         ]
     )
 
