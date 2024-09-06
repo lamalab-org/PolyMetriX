@@ -2,6 +2,7 @@ import os
 import pickle
 import datetime
 from typing import List, Union
+from abc import ABC, abstractmethod
 from omegaconf import DictConfig, OmegaConf
 import numpy as np
 import pandas as pd
@@ -36,20 +37,16 @@ class PolymerFeaturizer(BaseEstimator, TransformerMixin):
         return self.transform(processed_polymers)
 
 
-class BaseModel:
+class BaseModel(ABC):
     def __init__(self, cfg: DictConfig):
         self.cfg = cfg
         self.featurizer = PolymerFeaturizer(create_featurizer())
-        self.regressor = self._create_regressor()
+        self.regressor = self.create_regressor()
         self.pipeline = self._default_pipeline()
 
-    def _create_regressor(self):
-        if self.cfg.model.name == "random_forest":
-            return RandomForestRegressor()
-        elif self.cfg.model.name == "xgboost":
-            return XGBRegressor()
-        else:
-            raise ValueError(f"Unsupported model: {self.cfg.model.name}")
+    @abstractmethod
+    def create_regressor(self):
+        pass
 
     def _default_pipeline(self):
         return Pipeline(
@@ -80,62 +77,89 @@ class BaseModel:
         }
 
     def save_pretrained(self, preset: str, model_dir: str = None):
-        if model_dir is None:
-            model_dir = self.get_default_model_dir()
+        try:
+            if model_dir is None:
+                model_dir = self.get_default_model_dir()
 
-        os.makedirs(model_dir, exist_ok=True)
+            os.makedirs(model_dir, exist_ok=True)
 
-        current_time = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
-        model_filename = f"{preset}_{current_time}.pkl"
-        model_path = os.path.join(model_dir, model_filename)
+            current_time = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+            model_filename = f"{preset}_{current_time}.pkl"
+            model_path = os.path.join(model_dir, model_filename)
 
-        pretrained_data = {
-            "featurizer": self.featurizer.featurizer,
-            "pipeline": self.pipeline,
-            "saved_at": current_time,
-        }
+            pretrained_data = {
+                "featurizer": self.featurizer.featurizer,
+                "pipeline": self.pipeline,
+                "saved_at": current_time,
+            }
 
-        with open(model_path, "wb") as f:
-            pickle.dump(pretrained_data, f)
+            with open(model_path, "wb") as f:
+                pickle.dump(pretrained_data, f)
 
-        print(f"Model saved as {model_path}")
-        return model_filename
+            print(f"Model saved as {model_path}")
+            return model_filename
+        except (IOError, OSError) as e:
+            raise RuntimeError(f"Error saving model: {str(e)}")
 
     @staticmethod
     def get_default_model_dir():
         return os.path.join(os.getcwd(), "pretrained_models")
 
 
+class RandomForestModel(BaseModel):
+    def create_regressor(self):
+        return RandomForestRegressor(**self.cfg.model)
+
+
+class XGBoostModel(BaseModel):
+    def create_regressor(self):
+        return XGBRegressor(**self.cfg.model)
+
+
 def load_data(cfg: DictConfig):
-    df = pd.read_csv(cfg.data.input_file).sample(n=100)
+    df = pd.read_csv(cfg.data.input_file)
     polymers = df[cfg.data.polymer_column].apply(Polymer.from_psmiles).tolist()
     labels = df[cfg.data.label_column].tolist()
     return polymers, labels
 
 
 def objective(trial, cfg: DictConfig, X_train, X_valid, y_train, y_valid):
-    model_cfg = cfg.model
+    """
+    Objective function for hyperparameter optimization.
+
+    Args:
+        trial: Optuna trial object
+        cfg: Configuration dictionary
+        X_train, X_valid: Training and validation feature sets
+        y_train, y_valid: Training and validation target variables
+
+    Returns:
+        Evaluation metric for the trial
+    """
     params = {}
-    for param, value in model_cfg.items():
-        if isinstance(value, DictConfig):
-            if "min" in value and "max" in value:
-                if isinstance(value.min, int) and isinstance(value.max, int):
-                    params[param] = trial.suggest_int(param, value.min, value.max)
-                else:
-                    params[param] = trial.suggest_float(param, value.min, value.max)
-            elif isinstance(value, list):
-                params[param] = trial.suggest_categorical(param, value)
+    for param, value in cfg.model.items():
+        if isinstance(value, DictConfig) and "min" in value and "max" in value:
+            params[param] = (
+                trial.suggest_int(param, value.min, value.max)
+                if isinstance(value.min, int) and isinstance(value.max, int)
+                else trial.suggest_float(param, value.min, value.max)
+            )
         elif isinstance(value, list):
             params[param] = trial.suggest_categorical(param, value)
 
-    model = BaseModel(cfg)
-    if cfg.model.name == "random_forest":
-        # RandomForest doesn't use learning_rate, so we remove it
-        params.pop("learning_rate", None)
-    model.regressor.set_params(**params)
+    model = create_model(cfg.model.name, params)
     model.fit(X_train, y_train)
     y_pred = model.predict(X_valid)
     return mean_squared_error(y_valid, y_pred)
+
+
+def create_model(model_name: str, params: dict):
+    if model_name == "random_forest":
+        return RandomForestModel(DictConfig({"model": params}))
+    elif model_name == "xgboost":
+        return XGBoostModel(DictConfig({"model": params}))
+    else:
+        raise ValueError(f"Unsupported model: {model_name}")
 
 
 def optimize_hyperparameters(cfg: DictConfig, X_train, X_valid, y_train, y_valid):
@@ -147,6 +171,13 @@ def optimize_hyperparameters(cfg: DictConfig, X_train, X_valid, y_train, y_valid
     return study.best_params
 
 
+def print_metrics(set_name: str, mse: float, mae: float, r2: float):
+    print(f"{set_name} Set:")
+    print(f"Mean Squared Error: {mse}")
+    print(f"Mean Absolute Error: {mae}")
+    print(f"R-squared Score: {r2}")
+
+
 def train_and_evaluate_model(
     cfg: DictConfig, X_train, X_valid, X_test, y_train, y_valid, y_test
 ):
@@ -154,11 +185,8 @@ def train_and_evaluate_model(
     best_params = optimize_hyperparameters(cfg, X_train, X_valid, y_train, y_valid)
     print(f"Best hyperparameters: {best_params}")
 
-    if cfg.model.name == "random_forest":
-        best_params.pop("learning_rate", None)
-
     cfg.model = OmegaConf.merge(cfg.model, best_params)
-    model = BaseModel(cfg)
+    model = create_model(cfg.model.name, cfg.model)
 
     featurizer_info = model.get_featurizer_info()
     print(f"Number of featurizers used: {featurizer_info['total_featurizers']}")
@@ -185,14 +213,9 @@ def train_and_evaluate_model(
     test_r2 = r2_score(y_test, y_test_pred)
 
     print(f"Model Performance ({cfg.model.name}):")
-    print("Validation Set:")
-    print(f"Mean Squared Error: {valid_mse}")
-    print(f"Mean Absolute Error: {valid_mae}")
-    print(f"R-squared Score: {valid_r2}")
-    print("\nTest Set:")
-    print(f"Mean Squared Error: {test_mse}")
-    print(f"Mean Absolute Error: {test_mae}")
-    print(f"R-squared Score: {test_r2}")
+    print_metrics("Validation", valid_mse, valid_mae, valid_r2)
+    print()
+    print_metrics("Test", test_mse, test_mae, test_r2)
     print()
 
     return best_params, model

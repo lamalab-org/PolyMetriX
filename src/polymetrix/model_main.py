@@ -19,6 +19,7 @@ from models.model import load_data, train_and_evaluate_model
 def run_experiment(cfg: DictConfig, seed: int) -> Dict:
     cfg.data.random_state = seed
     print(f"Running experiment with seed {seed}")
+
     polymers, labels = load_data(cfg)
 
     # Split data into train, validation, and test sets
@@ -65,8 +66,7 @@ def calculate_average_metrics(results: List[Dict]) -> Dict:
     avg_hyperparameters = {}
     for key in all_hyper_keys:
         values = [r["hyperparameters"].get(key, np.nan) for r in results]
-        valid_values = [v for v in values if not np.isnan(v)]
-        if valid_values:
+        if valid_values := [v for v in values if not np.isnan(v)]:
             avg_hyperparameters[f"avg_{key}"] = np.mean(valid_values)
             avg_hyperparameters[f"std_{key}"] = (
                 np.std(valid_values) if len(valid_values) > 1 else 0
@@ -105,6 +105,7 @@ def main(cfg: DictConfig):
     output_dir = os.path.join(project_root, "results")
     os.makedirs(output_dir, exist_ok=True)
     output_file = os.path.join(output_dir, f"{cfg.model.name}_multi_seed_results.json")
+
     with open(output_file, "w") as f:
         json.dump(final_results, f, indent=2)
 
