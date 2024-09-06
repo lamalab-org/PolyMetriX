@@ -1,0 +1,22 @@
+name : xgboost
+n_estimators:
+  min: 100
+  max: 3000
+max_depth:
+  min: 5
+  max: 50
+learning_rate:
+  min: 1e-3
+  max: 1.0
+min_child_weight: 
+  min: 1
+  max: 10
+subsample:
+  min: 0.5
+  max: 1.0
+colsample_bytree:  
+  min: 0.5
+  max: 1.0
+gamma: 
+  min: 0
+  max: 5

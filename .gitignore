@@ -317,3 +317,17 @@ random_forest_metrics_fingerprints_seed_*.json
 EDA.ipynb
 extrapolation_random_forest_params_all.csv
 random_forest_params_all.csv
+Explore_polymer_class.ipynb
+Explore_featurizers.ipynb
+Polyinfo_mdpi.xlsx
+Polyinfo_mdpi_Tg.csv
+Polyinfo_mdpi.csv
+Polyinfo_mdpi_Tg_cleaned.csv
+Lesson_2_Regression.ipynb
+Lesson_1_Classification.ipynb
+model.ipynb
+pysr_test.ipynb
+results/
+outputs/
+
+
