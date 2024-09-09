@@ -11,6 +11,3 @@ min_samples_split:
 min_samples_leaf:
   min: 1
   max: 10
-max_features:
-  - 'sqrt'
-  - 'log2'

@@ -1,7 +1,7 @@
 import os
 import sys
 import json
-from typing import List, Dict
+from typing import List, Dict, Any
 import numpy as np
 
 # Add the project root to the Python path
@@ -12,22 +12,24 @@ import hydra
 from omegaconf import DictConfig, OmegaConf
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
-
 from models.model import load_data, train_and_evaluate_model
 
 
-def run_experiment(cfg: DictConfig, seed: int) -> Dict:
-    cfg.data.random_state = seed
+def run_experiment(config: Dict[str, Any], seed: int) -> Dict[str, Any]:
+    config["data"]["random_state"] = seed
     print(f"Running experiment with seed {seed}")
 
-    polymers, labels = load_data(cfg)
+    polymers, labels = load_data(config)
 
     # Split data into train, validation, and test sets
     X_train_val, X_test, y_train_val, y_test = train_test_split(
-        polymers, labels, test_size=cfg.data.test_size, random_state=seed
+        polymers, labels, test_size=config["data"]["test_size"], random_state=seed
     )
     X_train, X_valid, y_train, y_valid = train_test_split(
-        X_train_val, y_train_val, test_size=cfg.data.validation_size, random_state=seed
+        X_train_val,
+        y_train_val,
+        test_size=config["data"]["validation_size"],
+        random_state=seed,
     )
 
     print(f"Training samples: {len(X_train)}")
@@ -35,7 +37,7 @@ def run_experiment(cfg: DictConfig, seed: int) -> Dict:
     print(f"Test samples: {len(X_test)}")
 
     best_params, model = train_and_evaluate_model(
-        cfg, X_train, X_valid, X_test, y_train, y_valid, y_test
+        config, X_train, X_valid, X_test, y_train, y_valid, y_test
     )
 
     y_pred = model.predict(X_test)
@@ -50,7 +52,7 @@ def run_experiment(cfg: DictConfig, seed: int) -> Dict:
     }
 
 
-def calculate_average_metrics(results: List[Dict]) -> Dict:
+def calculate_average_metrics(results: List[Dict[str, Any]]) -> Dict[str, Any]:
     metrics = ["mse", "mae", "r2"]
     avg_metrics = {}
     for metric in metrics:
@@ -81,16 +83,17 @@ def calculate_average_metrics(results: List[Dict]) -> Dict:
     }
 
 
-@hydra.main(config_path="../../conf", config_name="config")
+@hydra.main(config_path="../../conf", config_name="config", version_base=None)
 def main(cfg: DictConfig):
-    print(OmegaConf.to_yaml(cfg))
+    config = OmegaConf.to_container(cfg, resolve=True)
+    print(json.dumps(config, indent=2))
 
     # Use seeds from the configuration
-    seeds = cfg.experiment.seeds
+    seeds = config["experiment"]["seeds"]
     results = []
 
     for seed in seeds:
-        result = run_experiment(cfg, seed)
+        result = run_experiment(config, seed)
         results.append(result)
         print(f"Seed {seed} results:")
         print(json.dumps(result, indent=2))
@@ -104,7 +107,9 @@ def main(cfg: DictConfig):
     # Save results to JSON file
     output_dir = os.path.join(project_root, "results")
     os.makedirs(output_dir, exist_ok=True)
-    output_file = os.path.join(output_dir, f"{cfg.model.name}_multi_seed_results.json")
+    output_file = os.path.join(
+        output_dir, f"{config['model']['name']}_multi_seed_results.json"
+    )
 
     with open(output_file, "w") as f:
         json.dump(final_results, f, indent=2)

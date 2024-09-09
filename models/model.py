@@ -1,9 +1,8 @@
 import os
 import pickle
 import datetime
-from typing import List, Union
+from typing import List, Union, Dict, Any
 from abc import ABC, abstractmethod
-from omegaconf import DictConfig, OmegaConf
 import numpy as np
 import pandas as pd
 import optuna
@@ -21,14 +20,40 @@ from polymetrix.data_main import create_featurizer
 
 
 class PolymerFeaturizer(BaseEstimator, TransformerMixin):
-    def __init__(self, featurizer: MultipleFeaturizer = None):
-        self.featurizer = featurizer or create_featurizer()
+    def __init__(
+        self,
+        featurizer: MultipleFeaturizer = None,
+        custom_featurizers: List[str] = None,
+        use_default: bool = True,
+    ):
+        self.default_featurizer = (
+            featurizer or create_featurizer() if use_default else None
+        )
+        self.custom_featurizers = custom_featurizers or []
+        self.use_default = use_default
 
     def fit(self, X, y=None):
         return self
 
     def transform(self, X):
-        return np.array([self.featurizer.featurize(polymer) for polymer in X])
+        features = []
+
+        if self.use_default:
+            default_features = np.array(
+                [self.default_featurizer.featurize(polymer) for polymer in X]
+            )
+            features.append(default_features)
+
+        if self.custom_featurizers:
+            custom_features = np.array(
+                [
+                    [getattr(polymer, feat) for feat in self.custom_featurizers]
+                    for polymer in X
+                ]
+            )
+            features.append(custom_features)
+
+        return np.hstack(features) if len(features) > 1 else features[0]
 
     def featurize_many(self, polymers: List[Union[Polymer, str]]):
         processed_polymers = [
@@ -38,11 +63,26 @@ class PolymerFeaturizer(BaseEstimator, TransformerMixin):
 
 
 class BaseModel(ABC):
-    def __init__(self, cfg: DictConfig):
-        self.cfg = cfg
-        self.featurizer = PolymerFeaturizer(create_featurizer())
+    def __init__(self, config: Dict[str, Any]):
+        self.config = config
+        self.featurizer = self.create_featurizer()
         self.regressor = self.create_regressor()
         self.pipeline = self._default_pipeline()
+
+    def create_featurizer(self):
+        featurizer_config = self.config.get("featurizer", {})
+        custom_featurizers = featurizer_config.get("custom_featurizers", [])
+        use_default = featurizer_config.get("use_default", True)
+        if featurizer_config.get("type") == "default":
+            return PolymerFeaturizer(
+                create_featurizer() if use_default else None,
+                custom_featurizers,
+                use_default,
+            )
+        else:
+            raise NotImplementedError(
+                f"Featurizer type {featurizer_config.get('type')} not implemented"
+            )
 
     @abstractmethod
     def create_regressor(self):
@@ -66,15 +106,19 @@ class BaseModel(ABC):
         return self.pipeline.predict(features)
 
     def get_featurizer_info(self):
-        featurizer = self.featurizer.featurizer
-        featurizer_details = []
-        for f in featurizer.featurizers:
-            details = {"name": f.__class__.__name__, "parameters": f.__dict__}
-            featurizer_details.append(details)
-        return {
-            "total_featurizers": len(featurizer.featurizers),
-            "featurizer_details": featurizer_details,
+        info = {
+            "use_default_featurizers": self.featurizer.use_default,
+            "custom_featurizers": self.featurizer.custom_featurizers,
         }
+        if self.featurizer.use_default:
+            default_featurizer = self.featurizer.default_featurizer
+            default_featurizer_details = []
+            for f in default_featurizer.featurizers:
+                details = {"name": f.__class__.__name__, "parameters": f.__dict__}
+                default_featurizer_details.append(details)
+            info["default_featurizer_details"] = default_featurizer_details
+            info["total_default_featurizers"] = len(default_featurizer.featurizers)
+        return info
 
     def save_pretrained(self, preset: str, model_dir: str = None):
         try:
@@ -88,7 +132,7 @@ class BaseModel(ABC):
             model_path = os.path.join(model_dir, model_filename)
 
             pretrained_data = {
-                "featurizer": self.featurizer.featurizer,
+                "featurizer": self.featurizer,
                 "pipeline": self.pipeline,
                 "saved_at": current_time,
             }
@@ -108,65 +152,73 @@ class BaseModel(ABC):
 
 class RandomForestModel(BaseModel):
     def create_regressor(self):
-        return RandomForestRegressor(**self.cfg.model)
+        return RandomForestRegressor(**self.config["model"])
 
 
 class XGBoostModel(BaseModel):
     def create_regressor(self):
-        return XGBRegressor(**self.cfg.model)
+        return XGBRegressor(**self.config["model"])
 
 
-def load_data(cfg: DictConfig):
-    df = pd.read_csv(cfg.data.input_file)
-    polymers = df[cfg.data.polymer_column].apply(Polymer.from_psmiles).tolist()
-    labels = df[cfg.data.label_column].tolist()
+def load_data(config: Dict[str, Any]):
+    df = pd.read_csv(config["data"]["input_file"])
+    polymers = df[config["data"]["polymer_column"]].apply(Polymer.from_psmiles).tolist()
+    labels = df[config["data"]["label_column"]].tolist()
+
+    custom_featurizers = config["featurizer"].get("custom_featurizers", [])
+    for feat in custom_featurizers:
+        if feat not in df.columns:
+            raise ValueError(f"Custom featurizer '{feat}' not found in the input data.")
+
+    for polymer, row in zip(polymers, df.itertuples()):
+        for feat in custom_featurizers:
+            setattr(polymer, feat, getattr(row, feat))
+
     return polymers, labels
 
 
-def objective(trial, cfg: DictConfig, X_train, X_valid, y_train, y_valid):
-    """
-    Objective function for hyperparameter optimization.
-
-    Args:
-        trial: Optuna trial object
-        cfg: Configuration dictionary
-        X_train, X_valid: Training and validation feature sets
-        y_train, y_valid: Training and validation target variables
-
-    Returns:
-        Evaluation metric for the trial
-    """
+def objective(trial, config: Dict[str, Any], X_train, X_valid, y_train, y_valid):
     params = {}
-    for param, value in cfg.model.items():
-        if isinstance(value, DictConfig) and "min" in value and "max" in value:
-            params[param] = (
-                trial.suggest_int(param, value.min, value.max)
-                if isinstance(value.min, int) and isinstance(value.max, int)
-                else trial.suggest_float(param, value.min, value.max)
-            )
-        elif isinstance(value, list):
-            params[param] = trial.suggest_categorical(param, value)
+    for param, value in config["model"].items():
+        if param != "name":
+            if isinstance(value, dict) and "min" in value and "max" in value:
+                params[param] = (
+                    trial.suggest_int(param, value["min"], value["max"])
+                    if isinstance(value["min"], int) and isinstance(value["max"], int)
+                    else trial.suggest_float(param, value["min"], value["max"])
+                )
+            elif isinstance(value, list):
+                params[param] = trial.suggest_categorical(param, value)
 
-    model = create_model(cfg.model.name, params)
+    trial_config = config.copy()
+    trial_config["model"] = params
+    trial_config["model"]["name"] = config["model"]["name"]
+
+    model = create_model(config["model"]["name"], trial_config)
     model.fit(X_train, y_train)
     y_pred = model.predict(X_valid)
     return mean_squared_error(y_valid, y_pred)
 
 
-def create_model(model_name: str, params: dict):
+def create_model(model_name: str, config: Dict[str, Any]):
+    new_config = config.copy()
+    new_config["model"] = {k: v for k, v in config["model"].items() if k != "name"}
+
     if model_name == "random_forest":
-        return RandomForestModel(DictConfig({"model": params}))
+        return RandomForestModel(new_config)
     elif model_name == "xgboost":
-        return XGBoostModel(DictConfig({"model": params}))
+        return XGBoostModel(new_config)
     else:
         raise ValueError(f"Unsupported model: {model_name}")
 
 
-def optimize_hyperparameters(cfg: DictConfig, X_train, X_valid, y_train, y_valid):
+def optimize_hyperparameters(
+    config: Dict[str, Any], X_train, X_valid, y_train, y_valid
+):
     study = optuna.create_study(direction="minimize")
     study.optimize(
-        lambda trial: objective(trial, cfg, X_train, X_valid, y_train, y_valid),
-        n_trials=cfg.optimization.n_trials,
+        lambda trial: objective(trial, config, X_train, X_valid, y_train, y_valid),
+        n_trials=config["optimization"]["n_trials"],
     )
     return study.best_params
 
@@ -179,27 +231,34 @@ def print_metrics(set_name: str, mse: float, mae: float, r2: float):
 
 
 def train_and_evaluate_model(
-    cfg: DictConfig, X_train, X_valid, X_test, y_train, y_valid, y_test
+    config: Dict[str, Any], X_train, X_valid, X_test, y_train, y_valid, y_test
 ):
-    print(f"Optimizing hyperparameters for {cfg.model.name}...")
-    best_params = optimize_hyperparameters(cfg, X_train, X_valid, y_train, y_valid)
+    print(f"Optimizing hyperparameters for {config['model']['name']}...")
+    best_params = optimize_hyperparameters(config, X_train, X_valid, y_train, y_valid)
     print(f"Best hyperparameters: {best_params}")
 
-    cfg.model = OmegaConf.merge(cfg.model, best_params)
-    model = create_model(cfg.model.name, cfg.model)
+    config["model"].update(best_params)
+    model = create_model(config["model"]["name"], config)
 
     featurizer_info = model.get_featurizer_info()
-    print(f"Number of featurizers used: {featurizer_info['total_featurizers']}")
-    print("Featurizers used:")
-    for details in featurizer_info["featurizer_details"]:
-        print(f"- {details['name']}")
-        for param, value in details["parameters"].items():
-            print(f"  {param}: {value}")
-        print()
+    print("Featurizer Information:")
+    print(f"Using default featurizers: {featurizer_info['use_default_featurizers']}")
+    if featurizer_info["use_default_featurizers"]:
+        print(
+            f"Number of default featurizers: {featurizer_info['total_default_featurizers']}"
+        )
+        print("Default featurizers used:")
+        for details in featurizer_info["default_featurizer_details"]:
+            print(f"- {details['name']}")
+    print(
+        f"Custom featurizers used: {', '.join(featurizer_info['custom_featurizers'])}"
+    )
 
     model.fit(X_train, y_train)
 
-    saved_filename = model.save_pretrained(f"my_polymer_model_{cfg.model.name}")
+    saved_filename = model.save_pretrained(
+        f"my_polymer_model_{config['model']['name']}"
+    )
 
     y_valid_pred = model.predict(X_valid)
     y_test_pred = model.predict(X_test)
@@ -212,7 +271,7 @@ def train_and_evaluate_model(
     test_mae = mean_absolute_error(y_test, y_test_pred)
     test_r2 = r2_score(y_test, y_test_pred)
 
-    print(f"Model Performance ({cfg.model.name}):")
+    print(f"Model Performance ({config['model']['name']}):")
     print_metrics("Validation", valid_mse, valid_mae, valid_r2)
     print()
     print_metrics("Test", test_mse, test_mae, test_r2)
