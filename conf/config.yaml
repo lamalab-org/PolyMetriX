@@ -11,8 +11,6 @@ data:
   random_state: 40
 
 featurizer:
-  type: "default"
-  use_default: false  # Set to false to use only custom featurizers
   custom_featurizers:
     - molecular_weight_fullpolymerfeaturizer
     - sp3_carbon_count_fullpolymerfeaturizer
@@ -25,4 +23,4 @@ optimization:
   n_trials: 1
 
 experiment:
-  seeds: [42, 43, 44]
+  seeds: [42, 43]

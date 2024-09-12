@@ -11,19 +11,18 @@ sys.path.append(project_root)
 import hydra
 from omegaconf import DictConfig, OmegaConf
 from sklearn.model_selection import train_test_split
-from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
-from models.model import load_data, train_and_evaluate_model
+from models.model import load_data, train_and_evaluate_model, BaseModel
 
 
 def run_experiment(config: Dict[str, Any], seed: int) -> Dict[str, Any]:
     config["data"]["random_state"] = seed
-    print(f"Running experiment with seed {seed}")
+    print(f"\nRunning experiment with seed {seed}")
 
-    polymers, labels = load_data(config)
+    X, y = load_data(config)
 
     # Split data into train, validation, and test sets
     X_train_val, X_test, y_train_val, y_test = train_test_split(
-        polymers, labels, test_size=config["data"]["test_size"], random_state=seed
+        X, y, test_size=config["data"]["test_size"], random_state=seed
     )
     X_train, X_valid, y_train, y_valid = train_test_split(
         X_train_val,
@@ -40,15 +39,16 @@ def run_experiment(config: Dict[str, Any], seed: int) -> Dict[str, Any]:
         config, X_train, X_valid, X_test, y_train, y_valid, y_test
     )
 
-    y_pred = model.predict(X_test)
-    mse = mean_squared_error(y_test, y_pred)
-    mae = mean_absolute_error(y_test, y_pred)
-    r2 = r2_score(y_test, y_pred)
+    # Save the model
+    saved_filename = model.save_pretrained("my_polymer_model")
+    model_path = os.path.join(BaseModel.get_default_model_dir(), saved_filename)
+    print(f"Model saved as {model_path}")
 
     return {
         "seed": seed,
         "hyperparameters": best_params,
-        "metrics": {"mse": mse, "mae": mae, "r2": r2},
+        "metrics": model.test_metrics,
+        "pretrained_model_path": model_path,
     }
 
 
