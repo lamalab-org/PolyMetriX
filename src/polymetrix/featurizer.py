@@ -248,6 +248,158 @@ class PolymerPartFeaturizer:
             return [self.__class__.__name__.lower()]
 
 
+class HeteroatomDensity(BaseFeatureCalculator):
+    def calculate(self, mol: Chem.Mol) -> np.ndarray:
+        num_atoms = mol.GetNumAtoms()
+        num_heteroatoms = sum(
+            1 for atom in mol.GetAtoms() if atom.GetAtomicNum() not in [1, 6]
+        )
+        density = num_heteroatoms / num_atoms if num_atoms > 0 else 0
+        return np.array([density])
+
+    def feature_base_labels(self) -> List[str]:
+        return ["heteroatom_density"]
+
+
+class HeteroatomCount(BaseFeatureCalculator):
+    def calculate(self, mol: Chem.Mol) -> np.ndarray:
+        num_heteroatoms = sum(
+            1 for atom in mol.GetAtoms() if atom.GetAtomicNum() not in [1, 6]
+        )
+        return np.array([num_heteroatoms])
+
+    def feature_base_labels(self) -> List[str]:
+        return ["heteroatom_count"]
+
+
+class HeteroatomDistanceStats(BaseFeatureCalculator):
+    def calculate(self, mol: Chem.Mol) -> np.ndarray:
+        heteroatom_indices = [
+            atom.GetIdx()
+            for atom in mol.GetAtoms()
+            if atom.GetAtomicNum() not in [1, 6]
+        ]
+
+        if len(heteroatom_indices) < 2:
+            return np.array([0, 0, 0])  # avg, min, max distances
+
+        # Generate 2D coordinates if they don't exist
+        if mol.GetNumConformers() == 0:
+            AllChem.Compute2DCoords(mol)
+
+        conf = mol.GetConformer()
+
+        distances = []
+        for i in range(len(heteroatom_indices)):
+            for j in range(i + 1, len(heteroatom_indices)):
+                pos1 = conf.GetAtomPosition(heteroatom_indices[i])
+                pos2 = conf.GetAtomPosition(heteroatom_indices[j])
+                # Calculate 2D distance
+                distance = ((pos1.x - pos2.x) ** 2 + (pos1.y - pos2.y) ** 2) ** 0.5
+                distances.append(distance)
+
+        if distances:
+            return np.array([np.mean(distances), np.min(distances), np.max(distances)])
+        else:
+            return np.array([0, 0, 0])
+
+    def feature_base_labels(self) -> List[str]:
+        return [
+            "avg_heteroatom_distance",
+            "min_heteroatom_distance",
+            "max_heteroatom_distance",
+        ]
+
+
+class NearestNeighborHeteroatoms(BaseFeatureCalculator):
+    def calculate(self, mol: Chem.Mol) -> np.ndarray:
+        heteroatom_pairs = set()
+        for atom in mol.GetAtoms():
+            if atom.GetAtomicNum() not in [1, 6]:  # Not hydrogen or carbon
+                atom_idx = atom.GetIdx()
+                for neighbor in atom.GetNeighbors():
+                    if neighbor.GetAtomicNum() not in [1, 6]:
+                        neighbor_idx = neighbor.GetIdx()
+                        # Ensure we don't count the same pair twice
+                        heteroatom_pairs.add(tuple(sorted([atom_idx, neighbor_idx])))
+
+        return np.array([len(heteroatom_pairs)])
+
+    def feature_base_labels(self) -> List[str]:
+        return ["nearest_neighbor_heteroatoms"]
+
+
+class HalogenCounts(BaseFeatureCalculator):
+    def calculate(self, mol: Chem.Mol) -> np.ndarray:
+        halogen_counts = {9: 0, 17: 0, 35: 0, 53: 0}  # F, Cl, Br, I
+        for atom in mol.GetAtoms():
+            atomic_num = atom.GetAtomicNum()
+            if atomic_num in halogen_counts:
+                halogen_counts[atomic_num] += 1
+
+        total_halogens = sum(halogen_counts.values())
+        return np.array(
+            [total_halogens, halogen_counts[9], halogen_counts[17], halogen_counts[35]]
+        )
+
+    def feature_base_labels(self) -> List[str]:
+        return ["total_halogens", "fluorine_count", "chlorine_count", "bromine_count"]
+
+
+class BondCounts(BaseFeatureCalculator):
+    def calculate(self, mol: Chem.Mol) -> np.ndarray:
+        single_bonds = 0
+        double_bonds = 0
+        triple_bonds = 0
+
+        for bond in mol.GetBonds():
+            bond_type = bond.GetBondType()
+            if bond_type == Chem.BondType.SINGLE:
+                single_bonds += 1
+            elif bond_type == Chem.BondType.DOUBLE:
+                double_bonds += 1
+            elif bond_type == Chem.BondType.TRIPLE:
+                triple_bonds += 1
+
+        return np.array([single_bonds, double_bonds, triple_bonds])
+
+    def feature_base_labels(self) -> List[str]:
+        return ["single_bonds", "double_bonds", "triple_bonds"]
+
+
+class BridgingRingsCount(BaseFeatureCalculator):
+    def calculate(self, mol: Chem.Mol) -> np.ndarray:
+        ring_info = mol.GetRingInfo()
+        rings = ring_info.AtomRings()
+        bridging_rings = 0
+
+        for i in range(len(rings)):
+            for j in range(i + 1, len(rings)):
+                if len(set(rings[i]) & set(rings[j])) >= 2:
+                    bridging_rings += 1
+                    break
+
+        return np.array([bridging_rings])
+
+    def feature_base_labels(self) -> List[str]:
+        return ["bridging_rings_count"]
+
+
+class MaxRingSize(BaseFeatureCalculator):
+    def calculate(self, mol: Chem.Mol) -> np.ndarray:
+        ring_info = mol.GetRingInfo()
+        rings = ring_info.AtomRings()
+
+        if not rings:
+            return np.array([0])
+
+        max_size = max(len(ring) for ring in rings)
+        return np.array([max_size])
+
+    def feature_base_labels(self) -> List[str]:
+        return ["max_ring_size"]
+
+
 class SideChainFeaturizer(PolymerPartFeaturizer):
     def featurize(self, polymer) -> np.ndarray:
         sidechain_mols = polymer.get_backbone_and_sidechain_molecules()[1]

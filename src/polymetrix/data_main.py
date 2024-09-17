@@ -26,6 +26,14 @@ from polymetrix.featurizer import (
     MaxEStateIndex,
     SMR_VSA5,
     FpDensityMorgan1,
+    HeteroatomDensity,
+    HeteroatomCount,
+    NearestNeighborHeteroatoms,
+    HeteroatomDistanceStats,
+    HalogenCounts,
+    BondCounts,
+    BridgingRingsCount,
+    MaxRingSize
 )
 import os
 import fire
@@ -56,6 +64,14 @@ def create_featurizer():
     max_estate_index = FullPolymerFeaturizer(MaxEStateIndex())
     smr_vsa5 = FullPolymerFeaturizer(SMR_VSA5())
     fp_density_morgan1 = FullPolymerFeaturizer(FpDensityMorgan1())
+    heteroatom_density = FullPolymerFeaturizer(HeteroatomDensity())
+    heteroatom_count = FullPolymerFeaturizer(HeteroatomCount())
+    nearest_neighbor_heteroatoms = FullPolymerFeaturizer(NearestNeighborHeteroatoms())
+    hetero_distance_stats = FullPolymerFeaturizer(HeteroatomDistanceStats())
+    halogen_counts = FullPolymerFeaturizer(HalogenCounts())
+    bond_counts = FullPolymerFeaturizer(BondCounts())
+    bridging_rings_count = FullPolymerFeaturizer(BridgingRingsCount())
+    max_ring_size = FullPolymerFeaturizer(MaxRingSize())
 
     return MultipleFeaturizer(
         [
@@ -80,6 +96,14 @@ def create_featurizer():
             max_estate_index,
             smr_vsa5,
             fp_density_morgan1,
+            heteroatom_density,
+            heteroatom_count,
+            nearest_neighbor_heteroatoms,
+            hetero_distance_stats,
+            halogen_counts,
+            bond_counts,
+            bridging_rings_count,
+            max_ring_size
         ]
     )
 
