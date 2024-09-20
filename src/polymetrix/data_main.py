@@ -32,7 +32,7 @@ from polymetrix.featurizer import (
     MaxRingSize,
     HeteroatomCount,
     HeteroatomDensity,
-    HeteroatomDistanceStats
+    HeteroatomDistanceStats,
 )
 import os
 import fire
@@ -69,7 +69,9 @@ def create_featurizer():
     max_ring_size = FullPolymerFeaturizer(MaxRingSize())
     heteroatom_density = FullPolymerFeaturizer(HeteroatomDensity())
     heteroatom_count = FullPolymerFeaturizer(HeteroatomCount())
-    heteroatom_distance_stats = FullPolymerFeaturizer(HeteroatomDistanceStats(agg=["mean", "min", "max", "sum"]))
+    heteroatom_distance_stats = FullPolymerFeaturizer(
+        HeteroatomDistanceStats(agg=["mean", "min", "max", "sum"])
+    )
 
     return MultipleFeaturizer(
         [
@@ -100,7 +102,7 @@ def create_featurizer():
             max_ring_size,
             heteroatom_density,
             heteroatom_count,
-            heteroatom_distance_stats
+            heteroatom_distance_stats,
         ]
     )
 
