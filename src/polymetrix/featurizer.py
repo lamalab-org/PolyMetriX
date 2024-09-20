@@ -2,7 +2,10 @@ from typing import List, Optional
 import numpy as np
 from rdkit import Chem
 from rdkit.Chem import Descriptors, GraphDescriptors, AllChem
-from polymetrix.polymer import Polymer
+
+
+def count_heteroatoms(mol: Chem.Mol) -> int:
+    return sum(1 for atom in mol.GetAtoms() if atom.GetAtomicNum() not in [1, 6])
 
 
 class BaseFeatureCalculator:
@@ -231,29 +234,18 @@ class FpDensityMorgan1(BaseFeatureCalculator):
         return ["fp_density_morgan1"]
 
 
-class PolymerPartFeaturizer:
-    def __init__(self, calculator: Optional[BaseFeatureCalculator] = None):
-        self.calculator = calculator
+class HeteroatomCount(BaseFeatureCalculator):
+    def calculate(self, mol: Chem.Mol) -> np.ndarray:
+        return np.array([count_heteroatoms(mol)])
 
-    def featurize(self, polymer) -> np.ndarray:
-        raise NotImplementedError("Featurize method must be implemented by subclasses")
-
-    def feature_labels(self) -> List[str]:
-        if self.calculator:
-            return [
-                f"{label}_{self.__class__.__name__.lower()}"
-                for label in self.calculator.feature_base_labels()
-            ]
-        else:
-            return [self.__class__.__name__.lower()]
+    def feature_base_labels(self) -> List[str]:
+        return ["heteroatom_count"]
 
 
 class HeteroatomDensity(BaseFeatureCalculator):
     def calculate(self, mol: Chem.Mol) -> np.ndarray:
         num_atoms = mol.GetNumAtoms()
-        num_heteroatoms = sum(
-            1 for atom in mol.GetAtoms() if atom.GetAtomicNum() not in [1, 6]
-        )
+        num_heteroatoms = count_heteroatoms(mol)
         density = num_heteroatoms / num_atoms if num_atoms > 0 else 0
         return np.array([density])
 
@@ -261,18 +253,10 @@ class HeteroatomDensity(BaseFeatureCalculator):
         return ["heteroatom_density"]
 
 
-class HeteroatomCount(BaseFeatureCalculator):
-    def calculate(self, mol: Chem.Mol) -> np.ndarray:
-        num_heteroatoms = sum(
-            1 for atom in mol.GetAtoms() if atom.GetAtomicNum() not in [1, 6]
-        )
-        return np.array([num_heteroatoms])
-
-    def feature_base_labels(self) -> List[str]:
-        return ["heteroatom_count"]
-
-
 class HeteroatomDistanceStats(BaseFeatureCalculator):
+    def __init__(self, agg: List[str] = ["mean", "min", "max"]):
+        super().__init__(agg)
+
     def calculate(self, mol: Chem.Mol) -> np.ndarray:
         heteroatom_indices = [
             atom.GetIdx()
@@ -281,52 +265,35 @@ class HeteroatomDistanceStats(BaseFeatureCalculator):
         ]
 
         if len(heteroatom_indices) < 2:
-            return np.array([0, 0, 0])  # avg, min, max distances
+            return np.array([0] * len(self.agg))
 
-        # Generate 2D coordinates if they don't exist
         if mol.GetNumConformers() == 0:
             AllChem.Compute2DCoords(mol)
 
         conf = mol.GetConformer()
-
         distances = []
+
         for i in range(len(heteroatom_indices)):
             for j in range(i + 1, len(heteroatom_indices)):
                 pos1 = conf.GetAtomPosition(heteroatom_indices[i])
                 pos2 = conf.GetAtomPosition(heteroatom_indices[j])
-                # Calculate 2D distance
                 distance = ((pos1.x - pos2.x) ** 2 + (pos1.y - pos2.y) ** 2) ** 0.5
                 distances.append(distance)
 
-        if distances:
-            return np.array([np.mean(distances), np.min(distances), np.max(distances)])
-        else:
-            return np.array([0, 0, 0])
+        if not distances:
+            return np.array([0] * len(self.agg))
+
+        agg_funcs = {
+            "mean": np.mean,
+            "min": np.min,
+            "max": np.max,
+            "sum": np.sum,
+        }
+
+        return np.array([agg_funcs[agg](distances) for agg in self.agg])
 
     def feature_base_labels(self) -> List[str]:
-        return [
-            "avg_heteroatom_distance",
-            "min_heteroatom_distance",
-            "max_heteroatom_distance",
-        ]
-
-
-class NearestNeighborHeteroatoms(BaseFeatureCalculator):
-    def calculate(self, mol: Chem.Mol) -> np.ndarray:
-        heteroatom_pairs = set()
-        for atom in mol.GetAtoms():
-            if atom.GetAtomicNum() not in [1, 6]:  # Not hydrogen or carbon
-                atom_idx = atom.GetIdx()
-                for neighbor in atom.GetNeighbors():
-                    if neighbor.GetAtomicNum() not in [1, 6]:
-                        neighbor_idx = neighbor.GetIdx()
-                        # Ensure we don't count the same pair twice
-                        heteroatom_pairs.add(tuple(sorted([atom_idx, neighbor_idx])))
-
-        return np.array([len(heteroatom_pairs)])
-
-    def feature_base_labels(self) -> List[str]:
-        return ["nearest_neighbor_heteroatoms"]
+        return [f"heteroatom_distance_{agg}" for agg in self.agg]
 
 
 class HalogenCounts(BaseFeatureCalculator):
@@ -398,6 +365,23 @@ class MaxRingSize(BaseFeatureCalculator):
 
     def feature_base_labels(self) -> List[str]:
         return ["max_ring_size"]
+
+
+class PolymerPartFeaturizer:
+    def __init__(self, calculator: Optional[BaseFeatureCalculator] = None):
+        self.calculator = calculator
+
+    def featurize(self, polymer) -> np.ndarray:
+        raise NotImplementedError("Featurize method must be implemented by subclasses")
+
+    def feature_labels(self) -> List[str]:
+        if self.calculator:
+            return [
+                f"{label}_{self.__class__.__name__.lower()}"
+                for label in self.calculator.feature_base_labels()
+            ]
+        else:
+            return [self.__class__.__name__.lower()]
 
 
 class SideChainFeaturizer(PolymerPartFeaturizer):
