@@ -1,124 +1,26 @@
-test_size: 0.3 #for interpolation
-val_size: 0.1 #for interpolation
-random_state: 42
-split_type: extrapolation
-extra_suffix: '10'
-smiles_col: PSMILES
-feature_type: all
-model_name: random_forest
-max_evals: 100
-data_path: /home/ta45woj/PolyMetriX/data/Polymer_Tg_descriptors.csv
-output_dir: /home/ta45woj/PolyMetriX/data_splits/
-seeds: [42, 43, 44, 45, 46, 47]
-cluster_number: 10
+defaults:
+  - _self_
+  - model: random_forest
 
-features:
-  - nconf20_2
-  - rotatable_bonds
-  - num_rings
-  - num_aromatic_rings
-  - num_non_aromatic_rings
-  - hbond_acceptors
-  - hbond_donors
-  - n_sc
-  - min_length_sc
-  - max_length_sc
-  - mean_length_sc
-  - n_bb
-  - min_length_bb
-  - max_length_bb
-  - mean_length_bb
+data:
+  input_file: "/home/ta45woj/PolyMetriX/data/Polymer_Tg_featurizers.csv"
+  polymer_column: "PSMILES"
+  label_column: "Exp_Tg(K)"
+  test_size: 0.1
+  validation_size: 0.15
+  random_state: 40
 
-target: Exp_Tg(K)
+featurizer:
+  custom_featurizers:
+    - molecular_weight_fullpolymerfeaturizer
+    - sp3_carbon_count_fullpolymerfeaturizer
+    - sp2_carbon_count_fullpolymerfeaturizer
+    - max_estate_index_fullpolymerfeaturizer
+    - smr_vsa5_fullpolymerfeaturizer
+    - fp_density_morgan1_fullpolymerfeaturizer
 
-random_forest:
-  n_estimators: [100, 3000]
-  max_depth: [5, 50]
-  min_samples_split: [2, 20]
-  min_samples_leaf: [1, 10]
-  max_features: ['sqrt', 'log2']
+optimization:
+  n_trials: 1
 
-lightgbm:
-  num_leaves: [2, 256]
-  learning_rate: [1e-3, 1e-1]
-
-gaussian_process:
-  alpha: [1e-10, 1e-1]
-
-xgboost:
-  n_estimators: [10, 100]
-  max_depth: [2, 32]
-  learning_rate: [1e-3, 1e-1]
-
-
-# test_size: 0.2
-# random_state: 42
-# split_type: extrapolation
-# feature_type: all
-# model_name: random_forest
-# max_evals: 50
-# data_path: /home/ta45woj/PolyMetriX/data/Polymer_Tg_descriptors.csv
-# output_dir: /home/ta45woj/PolyMetriX/data_splits/
-# seeds: [11, 12]
-
-# features:
-#   - nconf20_2
-#   - rotatable_bonds
-#   - num_rings
-#   - num_aromatic_rings
-#   - num_non_aromatic_rings
-#   - hbond_acceptors
-#   - hbond_donors
-#   - n_sc
-#   - min_length_sc
-#   - max_length_sc
-#   - mean_length_sc
-#   - n_bb
-#   - min_length_bb
-#   - max_length_bb
-#   - mean_length_bb
-
-# target: Exp_Tg(K)
-
-# random_forest:
-#   n_estimators: [10, 100]
-#   max_depth: [2, 32]
-
-# lightgbm:
-#   num_leaves: [2, 256]
-#   learning_rate: [1e-3, 1e-1]
-
-# gaussian_process:
-#   alpha: [1e-10, 1e-1]
-
-# xgboost:
-#   n_estimators: [10, 100]
-#   max_depth: [2, 32]
-#   learning_rate: [1e-3, 1e-1]
-
-# split_type: extrapolation
-# feature_type: all
-# model_name: lightgbm
-# max_evals: 2
-# data_path: /home/ta45woj/PolyMetriX/data/Polymer_Tg_descriptors.csv
-# output_dir: /home/ta45woj/PolyMetriX/data_splits/
-# seeds: [42, 43]
-
-# features:
-#   - nconf20_2
-#   - rotatable_bonds
-#   - num_rings
-#   - num_aromatic_rings
-#   - num_non_aromatic_rings
-#   - hbond_acceptors
-#   - hbond_donors
-#   - n_sc
-#   - min_length_sc
-#   - max_length_sc
-#   - mean_length_sc
-#   - n_bb
-#   - min_length_bb
-#   - max_length_bb
-#   - mean_length_bb
-
-# target: Exp_Tg(K)
+experiment:
+  seeds: [42, 43]
