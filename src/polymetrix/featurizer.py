@@ -9,6 +9,13 @@ def count_heteroatoms(mol: Chem.Mol) -> int:
 
 
 class BaseFeatureCalculator:
+    agg_funcs = {
+        "mean": np.mean,
+        "min": np.min,
+        "max": np.max,
+        "sum": np.sum,
+    }
+
     def __init__(self, agg: List[str] = ["sum"]):
         self.agg = agg
 
@@ -28,16 +35,9 @@ class BaseFeatureCalculator:
     def aggregate(self, features: List[np.ndarray]) -> np.ndarray:
         results = []
         for agg_func in self.agg:
-            if agg_func == "sum":
-                results.append(np.sum(features, axis=0))
-            elif agg_func == "mean":
-                results.append(np.mean(features, axis=0))
-            elif agg_func == "min":
-                results.append(np.min(features, axis=0))
-            elif agg_func == "max":
-                results.append(np.max(features, axis=0))
-            else:
+            if agg_func not in self.agg_funcs:
                 raise ValueError(f"Unknown aggregation function: {agg_func}")
+            results.append(self.agg_funcs[agg_func](features, axis=0))
         return np.concatenate(results)
 
     def get_feature_names(self) -> List[str]:
@@ -283,14 +283,7 @@ class HeteroatomDistanceStats(BaseFeatureCalculator):
         if not distances:
             return np.array([0] * len(self.agg))
 
-        agg_funcs = {
-            "mean": np.mean,
-            "min": np.min,
-            "max": np.max,
-            "sum": np.sum,
-        }
-
-        return np.array([agg_funcs[agg](distances) for agg in self.agg])
+        return np.array([self.agg_funcs[agg](distances) for agg in self.agg])
 
     def feature_base_labels(self) -> List[str]:
         return [f"heteroatom_distance_{agg}" for agg in self.agg]

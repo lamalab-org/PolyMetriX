@@ -1,23 +1,16 @@
 import os
-import sys
 import json
 from typing import List, Dict, Any
 import numpy as np
-
-# Add the project root to the Python path
-project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
-sys.path.append(project_root)
-
 import hydra
 from omegaconf import DictConfig, OmegaConf
 from sklearn.model_selection import train_test_split
-from models.model import load_data, train_and_evaluate_model, BaseModel
+from polymetrix.models.model import load_data, train_and_evaluate_model, BaseModel
 
 
 def run_experiment(config: Dict[str, Any], seed: int) -> Dict[str, Any]:
     config["data"]["random_state"] = seed
     print(f"\nRunning experiment with seed {seed}")
-
     X, y = load_data(config)
 
     # Split data into train, validation, and test sets
@@ -105,7 +98,7 @@ def main(cfg: DictConfig):
     final_results = {"individual_runs": results, "average_results": average_results}
 
     # Save results to JSON file
-    output_dir = os.path.join(project_root, "results")
+    output_dir = os.path.join(os.getcwd(), "results")
     os.makedirs(output_dir, exist_ok=True)
     output_file = os.path.join(
         output_dir, f"{config['model']['name']}_multi_seed_results.json"
