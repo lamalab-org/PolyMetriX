@@ -2,6 +2,7 @@ from typing import List, Optional
 import numpy as np
 from rdkit import Chem
 from rdkit.Chem import Descriptors, GraphDescriptors, AllChem
+import logging
 
 
 class BaseFeatureCalculator:
@@ -264,7 +265,7 @@ class HeteroatomDensity(BaseFeatureCalculator):
     @staticmethod
     def count_heteroatoms(mol: Chem.Mol) -> int:
         return sum(1 for atom in mol.GetAtoms() if atom.GetAtomicNum() != 6)
-
+    
     def calculate(self, mol: Chem.Mol) -> np.ndarray:
         Chem.SanitizeMol(mol)
         num_atoms = mol.GetNumAtoms()
@@ -409,7 +410,7 @@ class SideChainFeaturizer(PolymerPartFeaturizer):
     def featurize(self, polymer) -> np.ndarray:
         sidechain_mols = polymer.get_backbone_and_sidechain_molecules()[1]
         if not sidechain_mols:
-            print("No sidechains found in the molecule")
+            logging.info("No sidechains found in the molecule")
             return np.zeros(
                 len(self.calculator.feature_base_labels()) * len(self.calculator.agg)
             )
