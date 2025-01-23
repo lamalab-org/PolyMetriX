@@ -58,7 +58,7 @@ $ cd polymetrix
 $ pip install -e .
 ```
 
-# Usuage example for getting the single featurizer for the full polymer level
+# Usage example for getting the single featurizer for the full polymer level
 ```python
 from polymetrix.featurizer import FullPolymerFeaturizer, MolecularWeightFeaturizer, 
 
