@@ -60,6 +60,7 @@ decoder = ["pyxtal"]
 
 [tool.setuptools.package-data]
 template = ["py.typed"]
+polymetrix = ["data/*.csv"]
 
 [tool.pyright]
 include = ["template"]
