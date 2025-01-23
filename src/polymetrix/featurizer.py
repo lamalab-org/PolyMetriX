@@ -4,10 +4,6 @@ from rdkit import Chem
 from rdkit.Chem import Descriptors, GraphDescriptors, AllChem
 
 
-def count_heteroatoms(mol: Chem.Mol) -> int:
-    return sum(1 for atom in mol.GetAtoms() if atom.GetAtomicNum() not in [1, 6])
-
-
 class BaseFeatureCalculator:
     agg_funcs = {
         "mean": np.mean,
@@ -54,6 +50,7 @@ class BaseFeatureCalculator:
 
 class NumHBondDonors(BaseFeatureCalculator):
     def calculate(self, mol: Chem.Mol) -> np.ndarray:
+        Chem.SanitizeMol(mol)
         return np.array([Descriptors.NumHDonors(mol)])
 
     def feature_base_labels(self) -> List[str]:
@@ -62,6 +59,7 @@ class NumHBondDonors(BaseFeatureCalculator):
 
 class NumHBondAcceptors(BaseFeatureCalculator):
     def calculate(self, mol: Chem.Mol) -> np.ndarray:
+        Chem.SanitizeMol(mol)
         return np.array([Descriptors.NumHAcceptors(mol)])
 
     def feature_base_labels(self) -> List[str]:
@@ -70,6 +68,7 @@ class NumHBondAcceptors(BaseFeatureCalculator):
 
 class NumRotatableBonds(BaseFeatureCalculator):
     def calculate(self, mol: Chem.Mol) -> np.ndarray:
+        Chem.SanitizeMol(mol)
         return np.array([Descriptors.NumRotatableBonds(mol)])
 
     def feature_base_labels(self) -> List[str]:
@@ -78,6 +77,7 @@ class NumRotatableBonds(BaseFeatureCalculator):
 
 class NumRings(BaseFeatureCalculator):
     def calculate(self, mol: Chem.Mol) -> np.ndarray:
+        Chem.SanitizeMol(mol)
         ring_info = mol.GetRingInfo()
         num_rings = len(ring_info.AtomRings())
         return np.array([num_rings])
@@ -96,6 +96,7 @@ class NumAtoms(BaseFeatureCalculator):
 
 class NumNonAromaticRings(BaseFeatureCalculator):
     def calculate(self, mol: Chem.Mol) -> np.ndarray:
+        Chem.SanitizeMol(mol)
         non_aromatic_rings = sum(
             1
             for ring in mol.GetRingInfo().AtomRings()
@@ -109,6 +110,7 @@ class NumNonAromaticRings(BaseFeatureCalculator):
 
 class NumAromaticRings(BaseFeatureCalculator):
     def calculate(self, mol: Chem.Mol) -> np.ndarray:
+        Chem.SanitizeMol(mol)
         aromatic_rings = sum(
             1
             for ring in mol.GetRingInfo().AtomRings()
@@ -122,6 +124,7 @@ class NumAromaticRings(BaseFeatureCalculator):
 
 class TopologicalSurfaceArea(BaseFeatureCalculator):
     def calculate(self, mol: Chem.Mol) -> np.ndarray:
+        Chem.SanitizeMol(mol)
         return np.array([Descriptors.TPSA(mol)])
 
     def feature_base_labels(self) -> List[str]:
@@ -130,6 +133,7 @@ class TopologicalSurfaceArea(BaseFeatureCalculator):
 
 class FractionBicyclicRings(BaseFeatureCalculator):
     def calculate(self, mol: Chem.Mol) -> np.ndarray:
+        Chem.SanitizeMol(mol)
         ring_info = mol.GetRingInfo()
         atom_rings = ring_info.AtomRings()
         bicyclic_count = 0
@@ -150,6 +154,7 @@ class FractionBicyclicRings(BaseFeatureCalculator):
 
 class NumAliphaticHeterocycles(BaseFeatureCalculator):
     def calculate(self, mol: Chem.Mol) -> np.ndarray:
+        Chem.SanitizeMol(mol)
         num_heterocycles = 0
         for ring in mol.GetRingInfo().AtomRings():
             if any(mol.GetAtomWithIdx(atom).GetAtomicNum() != 6 for atom in ring):
@@ -162,6 +167,7 @@ class NumAliphaticHeterocycles(BaseFeatureCalculator):
 
 class SlogPVSA1(BaseFeatureCalculator):
     def calculate(self, mol: Chem.Mol) -> np.ndarray:
+        Chem.SanitizeMol(mol)
         return np.array([Descriptors.SlogP_VSA1(mol)])
 
     def feature_base_labels(self) -> List[str]:
@@ -170,6 +176,7 @@ class SlogPVSA1(BaseFeatureCalculator):
 
 class BalabanJIndex(BaseFeatureCalculator):
     def calculate(self, mol: Chem.Mol) -> np.ndarray:
+        Chem.SanitizeMol(mol)
         return np.array([GraphDescriptors.BalabanJ(mol)])
 
     def feature_base_labels(self) -> List[str]:
@@ -178,6 +185,7 @@ class BalabanJIndex(BaseFeatureCalculator):
 
 class MolecularWeightFeaturizer(BaseFeatureCalculator):
     def calculate(self, mol: Chem.Mol) -> np.ndarray:
+        Chem.SanitizeMol(mol)
         return np.array([Descriptors.ExactMolWt(mol)])
 
     def feature_base_labels(self) -> List[str]:
@@ -186,6 +194,7 @@ class MolecularWeightFeaturizer(BaseFeatureCalculator):
 
 class Sp3CarbonCountFeaturizer(BaseFeatureCalculator):
     def calculate(self, mol: Chem.Mol) -> np.ndarray:
+        Chem.SanitizeMol(mol)
         sp3_count = sum(
             1
             for atom in mol.GetAtoms()
@@ -199,6 +208,7 @@ class Sp3CarbonCountFeaturizer(BaseFeatureCalculator):
 
 class Sp2CarbonCountFeaturizer(BaseFeatureCalculator):
     def calculate(self, mol: Chem.Mol) -> np.ndarray:
+        Chem.SanitizeMol(mol)
         sp2_count = sum(
             1
             for atom in mol.GetAtoms()
@@ -212,6 +222,7 @@ class Sp2CarbonCountFeaturizer(BaseFeatureCalculator):
 
 class MaxEStateIndex(BaseFeatureCalculator):
     def calculate(self, mol: Chem.Mol) -> np.ndarray:
+        Chem.SanitizeMol(mol)
         return np.array([Descriptors.MaxEStateIndex(mol)])
 
     def feature_base_labels(self) -> List[str]:
@@ -220,6 +231,7 @@ class MaxEStateIndex(BaseFeatureCalculator):
 
 class SMR_VSA5(BaseFeatureCalculator):
     def calculate(self, mol: Chem.Mol) -> np.ndarray:
+        Chem.SanitizeMol(mol)
         return np.array([Descriptors.SMR_VSA5(mol)])
 
     def feature_base_labels(self) -> List[str]:
@@ -228,6 +240,7 @@ class SMR_VSA5(BaseFeatureCalculator):
 
 class FpDensityMorgan1(BaseFeatureCalculator):
     def calculate(self, mol: Chem.Mol) -> np.ndarray:
+        Chem.SanitizeMol(mol)
         return np.array([Descriptors.FpDensityMorgan1(mol)])
 
     def feature_base_labels(self) -> List[str]:
@@ -235,17 +248,27 @@ class FpDensityMorgan1(BaseFeatureCalculator):
 
 
 class HeteroatomCount(BaseFeatureCalculator):
+    @staticmethod
+    def count_heteroatoms(mol: Chem.Mol) -> int:
+        return sum(1 for atom in mol.GetAtoms() if atom.GetAtomicNum() != 6)
+
     def calculate(self, mol: Chem.Mol) -> np.ndarray:
-        return np.array([count_heteroatoms(mol)])
+        Chem.SanitizeMol(mol)
+        return np.array([HeteroatomCount.count_heteroatoms(mol)])
 
     def feature_base_labels(self) -> List[str]:
         return ["heteroatom_count"]
 
 
 class HeteroatomDensity(BaseFeatureCalculator):
+    @staticmethod
+    def count_heteroatoms(mol: Chem.Mol) -> int:
+        return sum(1 for atom in mol.GetAtoms() if atom.GetAtomicNum() != 6)
+
     def calculate(self, mol: Chem.Mol) -> np.ndarray:
+        Chem.SanitizeMol(mol)
         num_atoms = mol.GetNumAtoms()
-        num_heteroatoms = count_heteroatoms(mol)
+        num_heteroatoms = HeteroatomDensity.count_heteroatoms(mol)
         density = num_heteroatoms / num_atoms if num_atoms > 0 else 0
         return np.array([density])
 
@@ -258,6 +281,7 @@ class HeteroatomDistanceStats(BaseFeatureCalculator):
         super().__init__(agg)
 
     def calculate(self, mol: Chem.Mol) -> np.ndarray:
+        Chem.SanitizeMol(mol)
         heteroatom_indices = [
             atom.GetIdx()
             for atom in mol.GetAtoms()
@@ -291,6 +315,7 @@ class HeteroatomDistanceStats(BaseFeatureCalculator):
 
 class HalogenCounts(BaseFeatureCalculator):
     def calculate(self, mol: Chem.Mol) -> np.ndarray:
+        Chem.SanitizeMol(mol)
         halogen_counts = {9: 0, 17: 0, 35: 0, 53: 0}  # F, Cl, Br, I
         for atom in mol.GetAtoms():
             atomic_num = atom.GetAtomicNum()
@@ -308,6 +333,7 @@ class HalogenCounts(BaseFeatureCalculator):
 
 class BondCounts(BaseFeatureCalculator):
     def calculate(self, mol: Chem.Mol) -> np.ndarray:
+        Chem.SanitizeMol(mol)
         single_bonds = 0
         double_bonds = 0
         triple_bonds = 0
@@ -329,6 +355,7 @@ class BondCounts(BaseFeatureCalculator):
 
 class BridgingRingsCount(BaseFeatureCalculator):
     def calculate(self, mol: Chem.Mol) -> np.ndarray:
+        Chem.SanitizeMol(mol)
         ring_info = mol.GetRingInfo()
         rings = ring_info.AtomRings()
         bridging_rings = 0
@@ -347,6 +374,7 @@ class BridgingRingsCount(BaseFeatureCalculator):
 
 class MaxRingSize(BaseFeatureCalculator):
     def calculate(self, mol: Chem.Mol) -> np.ndarray:
+        Chem.SanitizeMol(mol)
         ring_info = mol.GetRingInfo()
         rings = ring_info.AtomRings()
 
@@ -381,6 +409,7 @@ class SideChainFeaturizer(PolymerPartFeaturizer):
     def featurize(self, polymer) -> np.ndarray:
         sidechain_mols = polymer.get_backbone_and_sidechain_molecules()[1]
         if not sidechain_mols:
+            print("No sidechains found in the molecule")
             return np.zeros(
                 len(self.calculator.feature_base_labels()) * len(self.calculator.agg)
             )
