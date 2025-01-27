@@ -1,8 +1,8 @@
+import pandas as pd
+import numpy as np
 from collections.abc import Collection
 from typing import Optional
-import numpy as np
-import pandas as pd
-from polymetrix.datasets.dataset import AbstractDataset
+from polymetrix.datasets import AbstractDataset
 
 
 class GlassTempDataset(AbstractDataset):
@@ -39,6 +39,10 @@ class GlassTempDataset(AbstractDataset):
         ]
         self._meta_names = [col for col in self._df.columns if col.startswith("meta.")]
 
+        self._features = self._df[self._feature_names].to_numpy()
+        self._labels = self._df[self._label_names].to_numpy()
+        self._meta_data = self._df[self._meta_names].to_numpy()
+
     def get_subset(self, indices: Collection[int]) -> "GlassTempDataset":
         """Get a subset of the dataset.
 
@@ -46,7 +50,7 @@ class GlassTempDataset(AbstractDataset):
             indices (Collection[int]): Indices to include in the subset.
 
         Returns:
-            TgDataset: A new dataset containing only the specified indices.
+            GlassTempDataset: A new dataset containing only the specified indices.
         """
         return GlassTempDataset(df=self._df, subset=indices)
 
