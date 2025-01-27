@@ -139,6 +139,6 @@ The result will be a NumPy array of sidechain_num_hbond_donors, sidechain_num_hb
 ```python
 from polymetrix.data_loader import load_tg_dataset
 
-data = load_tg_dataset('.csv')
+data = load_tg_dataset('PolymerTg.csv')
 ```
 The data will be a pandas dataframe of the Tg dataset.
