@@ -441,7 +441,6 @@ def no_group_warn(groups: Optional[np.typing.ArrayLike]) -> None:
     if groups is None:
         logger.warning(
             "You are not using a grouped split."
-            " However, for retricular materials, grouping is typically a good idea to avoid data leakage."
         )
 
 
