@@ -31,6 +31,8 @@ class GlassTempDataset(AbstractDataset):
         if subset is not None:
             self._df = self._df.iloc[subset].reset_index(drop=True)
 
+        self.psmiles = self._df["PSMILES"].to_numpy()
+        
         self._feature_names = [
             col for col in self._df.columns if col.startswith("features.")
         ]

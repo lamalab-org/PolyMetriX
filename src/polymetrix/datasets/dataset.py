@@ -11,6 +11,7 @@ class AbstractDataset:
         self._meta_data = None
         self._features = None
         self._labels = None
+        self._psmiles = None
 
     def get_subset(self, indices: Collection[int]) -> "AbstractDataset":
         """Get a subset of the dataset.
@@ -102,3 +103,5 @@ class AbstractDataset:
             np.ndarray: Array of metadata values.
         """
         raise NotImplementedError()
+
+
