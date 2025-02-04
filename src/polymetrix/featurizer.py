@@ -3,6 +3,7 @@ import numpy as np
 from rdkit import Chem
 from rdkit.Chem import Descriptors, GraphDescriptors, AllChem
 import logging
+import networkx as nx
 
 
 class BaseFeatureCalculator:
@@ -265,7 +266,7 @@ class HeteroatomDensity(BaseFeatureCalculator):
     @staticmethod
     def count_heteroatoms(mol: Chem.Mol) -> int:
         return sum(1 for atom in mol.GetAtoms() if atom.GetAtomicNum() != 6)
-    
+
     def calculate(self, mol: Chem.Mol) -> np.ndarray:
         Chem.SanitizeMol(mol)
         num_atoms = mol.GetNumAtoms()
@@ -452,6 +453,97 @@ class FullPolymerFeaturizer(PolymerPartFeaturizer):
     def featurize(self, polymer) -> np.ndarray:
         mol = Chem.MolFromSmiles(polymer.psmiles)
         return self.calculator.calculate(mol)
+
+
+class AggregatingFeaturizer(PolymerPartFeaturizer):
+    def __init__(self, agg: List[str] = ["mean", "min", "max"]):
+        super().__init__()
+        self.agg = agg
+
+    @property
+    def agg_funcs(self):
+        return {
+            "mean": np.mean,
+            "min": np.min,
+            "max": np.max,
+        }
+
+    def aggregate_values(self, values: List[float]) -> List[float]:
+        return [self.agg_funcs[func](values) for func in self.agg]
+
+
+class SidechainToBackboneRatioFeaturizer(AggregatingFeaturizer):
+    def featurize(self, polymer) -> np.ndarray:
+        graph = polymer.graph
+        star_nodes = [
+            node for node, data in graph.nodes(data=True) if data["element"] == "*"
+        ]
+        backbone_graphs, sidechain_graphs = polymer.get_backbone_and_sidechain_graphs()
+
+        if not sidechain_graphs or not backbone_graphs:
+            return np.zeros(len(self.agg))
+
+        sidechain_lengths = [len(sc.nodes()) for sc in sidechain_graphs]
+
+        backbone_lengths = []
+        for sidechain in sidechain_graphs:
+            min_backbone_length = float("inf")
+            side_nodes = set(sidechain.nodes())
+            for node in side_nodes:
+                neighbors = set(graph.neighbors(node))
+                backbone_neighbors = neighbors - side_nodes
+                if backbone_neighbors:
+                    attachment_point = list(backbone_neighbors)[0]
+                    for star in star_nodes:
+                        if nx.has_path(graph, star, attachment_point):
+                            path_length = len(
+                                nx.shortest_path(graph, star, attachment_point)
+                            )
+                            min_backbone_length = min(min_backbone_length, path_length)
+            backbone_lengths.append(min_backbone_length)
+
+        ratios = [
+            s_length / b_length
+            for s_length, b_length in zip(sidechain_lengths, backbone_lengths)
+            if b_length > 0
+        ]
+
+        if not ratios:
+            return np.zeros(len(self.agg))
+
+        agg_ratios = self.aggregate_values(ratios)
+        return np.array(agg_ratios)
+
+    def feature_labels(self) -> List[str]:
+        return [f"sidechain_to_backbone_ratio_{agg}" for agg in self.agg]
+
+
+class BackboneToSidechainDistanceFeaturizer(AggregatingFeaturizer):
+    def featurize(self, polymer) -> np.ndarray:
+        graph = polymer.graph
+        star_nodes = [
+            node for node, data in graph.nodes(data=True) if data["element"] == "*"
+        ]
+        sidechain_graphs = polymer.get_backbone_and_sidechain_graphs()[1]
+
+        distances = []
+        for sidechain in sidechain_graphs:
+            valid_dists = [
+                nx.shortest_path_length(graph, star, node) - 1
+                for star in star_nodes
+                for node in sidechain.nodes()
+                if nx.has_path(graph, star, node)
+            ]
+            if valid_dists:
+                distances.append(min(valid_dists))
+
+        if not distances:
+            return np.zeros(len(self.agg))
+
+        return np.array([self.agg_funcs[agg](distances) for agg in self.agg])
+
+    def feature_labels(self) -> List[str]:
+        return [f"backbone_to_sidechain_distance_{agg}" for agg in self.agg]
 
 
 class MultipleFeaturizer:
