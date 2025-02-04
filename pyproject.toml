@@ -37,7 +37,7 @@ dependencies = [
   "radonpy-pypi",
   "rdkit",
   "matplotlib",
-  "mofdscribe @ git+https://github.com/kjappelbaum/mofdscribe.git@main#subdirectory=src/mofdscribe"
+  "mofdscribe @ git+https://github.com/kjappelbaum/mofdscribe.git@main"
 ]
 
 [project.optional-dependencies]
