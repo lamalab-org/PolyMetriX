@@ -6,11 +6,7 @@ from polymetrix.datasets import AbstractDataset
 
 
 class GlassTempDataset(AbstractDataset):
-    """Dataset for polymer glass transition temperature (Tg) data.
-
-    This dataset contains polymer properties along with their glass transition
-    temperatures and related properties.
-    """
+    """Dataset for polymer glass transition temperature (Tg) data."""
 
     def __init__(
         self,
@@ -31,8 +27,8 @@ class GlassTempDataset(AbstractDataset):
         if subset is not None:
             self._df = self._df.iloc[subset].reset_index(drop=True)
 
-        self.psmiles = self._df["PSMILES"].to_numpy()
-        
+        self._psmiles = self._df["PSMILES"].to_numpy()
+
         self._feature_names = [
             col for col in self._df.columns if col.startswith("features.")
         ]
@@ -44,6 +40,10 @@ class GlassTempDataset(AbstractDataset):
         self._features = self._df[self._feature_names].to_numpy()
         self._labels = self._df[self._label_names].to_numpy()
         self._meta_data = self._df[self._meta_names].to_numpy()
+
+    @property
+    def psmiles(self):
+        return self._psmiles
 
     def get_subset(self, indices: Collection[int]) -> "GlassTempDataset":
         """Get a subset of the dataset.
