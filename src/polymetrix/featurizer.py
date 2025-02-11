@@ -587,6 +587,19 @@ class BackboneSidechainPositionFeaturizer(AggregatingFeaturizer):
         return [f"backbone_sidechain_position_{agg}" for agg in self.agg]
 
 
+class SidechainDiversityFeaturizer(PolymerPartFeaturizer):
+    def featurize(self, polymer) -> np.ndarray:
+        sidechain_graphs = polymer.get_backbone_and_sidechain_graphs()[1]
+        unique_hashes = set()
+        for scg in sidechain_graphs:
+            graph_hash = nx.weisfeiler_lehman_graph_hash(scg)
+            unique_hashes.add(graph_hash)
+        return np.array([len(unique_hashes)])
+
+    def feature_labels(self) -> List[str]:
+        return ["num_diverse_sidechains"]
+
+
 class MultipleFeaturizer:
     def __init__(self, featurizers: List[PolymerPartFeaturizer]):
         self.featurizers = featurizers
