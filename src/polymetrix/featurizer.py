@@ -546,6 +546,47 @@ class BackboneToSidechainDistanceFeaturizer(AggregatingFeaturizer):
         return [f"backbone_to_sidechain_distance_{agg}" for agg in self.agg]
 
 
+class BackboneSidechainPositionFeaturizer(AggregatingFeaturizer):
+    def featurize(self, polymer) -> np.ndarray:
+        backbone_graphs = polymer.get_backbone_and_sidechain_graphs()[0]
+        if not backbone_graphs:
+            return np.zeros(len(self.agg))
+        backbone = backbone_graphs[0]
+
+        try:
+            longest_path = max(
+                nx.all_simple_paths(
+                    backbone, min(backbone.nodes()), max(backbone.nodes())
+                ),
+                key=len,
+            )
+        except:
+            longest_path = []
+
+        if not longest_path:
+            return np.zeros(len(self.agg))
+
+        sidechain_connections = set()
+        for scg in polymer.get_backbone_and_sidechain_graphs()[1]:
+            for node in scg.nodes():
+                for neighbor in polymer.graph.neighbors(node):
+                    if neighbor in backbone.nodes():
+                        sidechain_connections.add(neighbor)
+                        break
+
+        positions = [
+            longest_path.index(ap) for ap in sidechain_connections if ap in longest_path
+        ]
+        if not positions:
+            return np.zeros(len(self.agg))
+
+        normalized = [pos / len(longest_path) for pos in positions]
+        return np.array([self.agg_funcs[agg](normalized) for agg in self.agg])
+
+    def feature_labels(self) -> List[str]:
+        return [f"backbone_sidechain_position_{agg}" for agg in self.agg]
+
+
 class MultipleFeaturizer:
     def __init__(self, featurizers: List[PolymerPartFeaturizer]):
         self.featurizers = featurizers
