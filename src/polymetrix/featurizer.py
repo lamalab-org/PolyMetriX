@@ -462,13 +462,11 @@ class AggregatingFeaturizer(PolymerPartFeaturizer):
         super().__init__()
         self.agg = agg
 
-    @property
-    def agg_funcs(self):
-        return {
-            "mean": np.mean,
-            "min": np.min,
-            "max": np.max,
-        }
+    agg_funcs = {
+        "mean": np.mean,
+        "min": np.min,
+        "max": np.max,
+    }
 
     def aggregate_values(self, values: List[float]) -> List[float]:
         return [self.agg_funcs[func](values) for func in self.agg]
