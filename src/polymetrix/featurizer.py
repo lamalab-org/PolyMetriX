@@ -456,7 +456,9 @@ class FullPolymerFeaturizer(PolymerPartFeaturizer):
 
 
 class AggregatingFeaturizer(PolymerPartFeaturizer):
-    def __init__(self, agg: List[str] = ["mean", "min", "max"]):
+    def __init__(self, agg: List[str] = None):
+        if agg is None:
+            agg = ["mean", "min", "max"]
         super().__init__()
         self.agg = agg
 
