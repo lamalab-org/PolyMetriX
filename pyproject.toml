@@ -37,6 +37,7 @@ dependencies = [
   "radonpy-pypi",
   "rdkit",
   "matplotlib",
+  "mofdscribe @ git+https://github.com/kjappelbaum/mofdscribe.git@main"
   "pystow",
 ]
 
