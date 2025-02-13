@@ -103,5 +103,3 @@ class AbstractDataset:
             np.ndarray: Array of metadata values.
         """
         raise NotImplementedError()
-
-
