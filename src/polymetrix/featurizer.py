@@ -496,8 +496,7 @@ class SidechainLengthToStarAttachmentDistanceRatioFeaturizer(BaseFeatureCalculat
             side_nodes = set(sidechain.nodes())
             for node in side_nodes:
                 neighbors = set(graph.neighbors(node))
-                backbone_neighbors = neighbors - side_nodes
-                if backbone_neighbors:
+                if backbone_neighbors := neighbors - side_nodes:
                     attachment_point = list(backbone_neighbors)[0]
                     for star in star_nodes:
                         if attachment_point in star_paths[star]:
