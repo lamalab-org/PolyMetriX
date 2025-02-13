@@ -1,4 +1,4 @@
 from .dataset import AbstractDataset
-from .curated_tg_dataset import GlassTempDataset
+from .curated_tg_dataset import CuratedGlassTempDataset
 
-__all__ = ['AbstractDataset', 'GlassTempDataset']
+__all__ = ['AbstractDataset', 'CuratedGlassTempDataset']
