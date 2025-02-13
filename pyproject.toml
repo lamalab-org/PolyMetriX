@@ -37,6 +37,7 @@ dependencies = [
   "radonpy-pypi",
   "rdkit",
   "matplotlib",
+  "pystow",
 ]
 
 [project.optional-dependencies]
@@ -49,18 +50,12 @@ dev = [
   "bump-my-version",
 ]
 
-docs = [
-  "mkdocs-material>=9.4.0",
-  "mkdocstrings[python]>=0.22.0",
-  "mkdocs-gen-files>=0.5.0",
-  "mkdocs-literate-nav>=0.6.0",
-]
+docs = ["mkdocs", "mkdocs-material", "mkdocstrings[python]"]
 
 decoder = ["pyxtal"]
 
 [tool.setuptools.package-data]
 template = ["py.typed"]
-polymetrix = ["data/PolymerTg.csv"]
 
 [tool.pyright]
 include = ["template"]
