@@ -26,7 +26,7 @@ class CuratedGlassTempDataset(AbstractDataset):
         self._version = version
         self._url = url
 
-        # Get CSV path and load data
+        # Get CSV path and load data properly
         csv_path = POLYMETRIX_PYSTOW_MODULE.ensure(
             "CuratedGlassTempDataset", 
             self._version, 
