@@ -426,6 +426,7 @@ class SideChainFeaturizer(PolymerPartFeaturizer):
     def featurize(self, polymer) -> np.ndarray:
         sidechain_mols = polymer.get_backbone_and_sidechain_molecules()[1]
         if not sidechain_mols:
+            logging.info("No sidechains found in the molecule")
             return np.zeros(len(self.calculator.feature_labels()))
         features = [self.calculator.calculate(mol) for mol in sidechain_mols]
         return self.calculator.aggregate(features)
