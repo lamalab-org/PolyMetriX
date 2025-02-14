@@ -21,8 +21,6 @@ class AbstractDataset(ABC):
     def get_subset(self, indices: Collection[int]) -> "AbstractDataset":
         """Get a subset of the dataset.
         Args:
-
-
             indices (Collection[int]): Indices to include in the subset.
         Returns:
             AbstractDataset: A new dataset containing only the specified indices.
@@ -33,8 +31,6 @@ class AbstractDataset(ABC):
     def available_features(self) -> list[str]:
         """List of available feature names in the dataset.
         Returns:
-
-
             List[str]: List of feature names.
         """
         return self._feature_names
@@ -51,8 +47,6 @@ class AbstractDataset(ABC):
     def meta_info(self) -> list[str]:
         """List of available metadata fields in the dataset.
         Returns:
-
-
             List[str]: List of metadata field names.
         """
         return self._meta_names
@@ -71,10 +65,8 @@ class AbstractDataset(ABC):
         """Get features for specified indices.
         Args:
             idx (Collection[int]): Indices of entries.
-
-
             feature_names (Optional[Collection[str]]): Names of features to return.
-                If None, returns all available features.
+            If None, returns all available features.
         Returns:
             np.ndarray: Array of feature values.
         """
@@ -90,7 +82,7 @@ class AbstractDataset(ABC):
         Args:
             idx (Collection[int]): Indices of entries.
             label_names (Optional[Collection[str]]): Names of labels to return.
-                If None, returns all available labels.
+            If None, returns all available labels.
         Returns:
             np.ndarray: Array of label values.
         """
@@ -105,10 +97,8 @@ class AbstractDataset(ABC):
         """Get metadata for specified indices.
         Args:
             idx (Collection[int]): Indices of entries.
-
-
             meta_keys (Optional[Collection[str]]): Names of metadata fields to return.
-                If None, returns all available metadata.
+            If None, returns all available metadata.
         Returns:
             np.ndarray: Array of metadata values.
         """
