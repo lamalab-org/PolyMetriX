@@ -1,5 +1,4 @@
 import pandas as pd
-import numpy as np
 from collections.abc import Collection
 from typing import Optional
 from polymetrix.constants import POLYMETRIX_PYSTOW_MODULE
@@ -27,12 +26,14 @@ class CuratedGlassTempDataset(AbstractDataset):
         self._version = version
         self._url = url
 
-        # Load dataset from Zenodo
-        self._df = pd.DataFrame(
-            POLYMETRIX_PYSTOW_MODULE.ensure_csv(
-                "CuratedGlassTempDataset", self._version, url=self._url
-            )
-        ).reset_index(drop=True)
+        # Get CSV path and load data
+        csv_path = POLYMETRIX_PYSTOW_MODULE.ensure(
+            "CuratedGlassTempDataset", 
+            self._version, 
+            url=self._url,
+            name="data.csv",
+        )
+        self._df = pd.read_csv(str(csv_path)).reset_index(drop=True) 
 
         if subset is not None:
             self._df = self._df.iloc[subset].reset_index(drop=True)
@@ -64,5 +65,7 @@ class CuratedGlassTempDataset(AbstractDataset):
             CuratedGlassTempDataset: A new dataset containing only the specified indices.
         """
         return CuratedGlassTempDataset(
-            version=self.version, url=self.url, subset=indices
+            version=self._version, 
+            url=self._url, 
+            subset=indices
         )
