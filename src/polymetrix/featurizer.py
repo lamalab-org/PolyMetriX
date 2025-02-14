@@ -416,7 +416,7 @@ class PolymerPartFeaturizer:
         if self.calculator:
             return [
                 f"{label}_{self.__class__.__name__.lower()}"
-                for label in self.calculator.feature_base_labels()
+                for label in self.calculator.feature_labels()
             ]
         else:
             return [self.__class__.__name__.lower()]
@@ -426,14 +426,9 @@ class SideChainFeaturizer(PolymerPartFeaturizer):
     def featurize(self, polymer) -> np.ndarray:
         sidechain_mols = polymer.get_backbone_and_sidechain_molecules()[1]
         if not sidechain_mols:
-            logging.info("No sidechains found in the molecule")
-            return np.zeros(
-                len(self.calculator.feature_base_labels()) * len(self.calculator.agg)
-            )
-        features = [
-            self.calculator.calculate(mol).reshape(-1, 1) for mol in sidechain_mols
-        ]
-        return self.calculator.aggregate(np.concatenate(features))
+            return np.zeros(len(self.calculator.feature_labels()))
+        features = [self.calculator.calculate(mol) for mol in sidechain_mols]
+        return self.calculator.aggregate(features)
 
     def feature_labels(self) -> List[str]:
         if self.calculator:
