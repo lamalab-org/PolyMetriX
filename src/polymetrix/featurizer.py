@@ -3,6 +3,7 @@ import numpy as np
 from rdkit import Chem
 from rdkit.Chem import Descriptors, GraphDescriptors, AllChem
 import logging
+import networkx as nx
 
 
 class BaseFeatureCalculator:
@@ -29,13 +30,31 @@ class BaseFeatureCalculator:
             f"{label}_{agg}" for label in self.feature_base_labels() for agg in self.agg
         ]
 
-    def aggregate(self, features: List[np.ndarray]) -> np.ndarray:
+    def aggregate(self, features: List) -> np.ndarray:
+        """
+        Aggregates a list of features using the aggregation functions specified in self.agg.
+        If the features are numpy arrays, the aggregation is applied along the first axis.
+        Otherwise, the aggregation is applied directly (assuming the features are scalar numeric values).
+        """
         results = []
-        for agg_func in self.agg:
-            if agg_func not in self.agg_funcs:
-                raise ValueError(f"Unknown aggregation function: {agg_func}")
-            results.append(self.agg_funcs[agg_func](features, axis=0))
-        return np.concatenate(results)
+        if not features:
+            return np.array([])
+
+        # Check whether features are numpy arrays by testing the first element.
+        first_elem = features[0]
+        if isinstance(first_elem, np.ndarray):
+            for agg_func in self.agg:
+                if agg_func not in self.agg_funcs:
+                    raise ValueError(f"Unknown aggregation function: {agg_func}")
+                aggregated = self.agg_funcs[agg_func](features, axis=0)
+                results.append(aggregated)
+            return np.concatenate(results)
+        else:
+            for agg_func in self.agg:
+                if agg_func not in self.agg_funcs:
+                    raise ValueError(f"Unknown aggregation function: {agg_func}")
+                results.append(self.agg_funcs[agg_func](features))
+            return np.array(results)
 
     def get_feature_names(self) -> List[str]:
         raise NotImplementedError(
@@ -265,7 +284,7 @@ class HeteroatomDensity(BaseFeatureCalculator):
     @staticmethod
     def count_heteroatoms(mol: Chem.Mol) -> int:
         return sum(1 for atom in mol.GetAtoms() if atom.GetAtomicNum() != 6)
-    
+
     def calculate(self, mol: Chem.Mol) -> np.ndarray:
         Chem.SanitizeMol(mol)
         num_atoms = mol.GetNumAtoms()
@@ -278,9 +297,6 @@ class HeteroatomDensity(BaseFeatureCalculator):
 
 
 class HeteroatomDistanceStats(BaseFeatureCalculator):
-    def __init__(self, agg: List[str] = ["mean", "min", "max"]):
-        super().__init__(agg)
-
     def calculate(self, mol: Chem.Mol) -> np.ndarray:
         Chem.SanitizeMol(mol)
         heteroatom_indices = [
@@ -308,10 +324,10 @@ class HeteroatomDistanceStats(BaseFeatureCalculator):
         if not distances:
             return np.array([0] * len(self.agg))
 
-        return np.array([self.agg_funcs[agg](distances) for agg in self.agg])
+        return self.aggregate(distances)
 
     def feature_base_labels(self) -> List[str]:
-        return [f"heteroatom_distance_{agg}" for agg in self.agg]
+        return [f"heteroatom_distance"]
 
 
 class HalogenCounts(BaseFeatureCalculator):
@@ -452,6 +468,101 @@ class FullPolymerFeaturizer(PolymerPartFeaturizer):
     def featurize(self, polymer) -> np.ndarray:
         mol = Chem.MolFromSmiles(polymer.psmiles)
         return self.calculator.calculate(mol)
+
+
+class SidechainLengthToStarAttachmentDistanceRatioFeaturizer(BaseFeatureCalculator):
+    """Computes aggregated ratios of sidechain lengths to the shortest backbone distance from the polymer's star node (*) to each sidechain's attachment point. The attachment point is a specific node on the backbone where a sidechain is connected.
+    The sidechain lengths are calculated as the number of nodes in the sidechain graph. The shortest backbone distance is calculated as the number of nodes in the shortest path from the star node to the attachment point. The ratio for each sidechain is defined as its length divided by its corresponding shortest backbone distance."""
+
+    def featurize(self, polymer) -> np.ndarray:
+        graph = polymer.graph
+        star_nodes = [
+            node for node, data in graph.nodes(data=True) if data["element"] == "*"
+        ]
+        backbone_graphs, sidechain_graphs = polymer.get_backbone_and_sidechain_graphs()
+
+        if not sidechain_graphs or not backbone_graphs:
+            return np.zeros(len(self.agg))
+
+        sidechain_lengths = [len(sc.nodes()) for sc in sidechain_graphs]
+
+        backbone_lengths = []
+        star_paths = {}
+        for star in star_nodes:
+            star_paths[star] = nx.single_source_shortest_path_length(graph, star)
+
+        for sidechain in sidechain_graphs:
+            min_backbone_length = float("inf")
+            side_nodes = set(sidechain.nodes())
+            for node in side_nodes:
+                neighbors = set(graph.neighbors(node))
+                if backbone_neighbors := neighbors - side_nodes:
+                    attachment_point = list(backbone_neighbors)[0]
+                    for star in star_nodes:
+                        if attachment_point in star_paths[star]:
+                            path_length = star_paths[star][attachment_point] + 1
+                            min_backbone_length = min(min_backbone_length, path_length)
+            backbone_lengths.append(min_backbone_length)
+
+        ratios = [
+            s_length / b_length
+            for s_length, b_length in zip(sidechain_lengths, backbone_lengths)
+            if b_length > 0
+        ]
+        if not ratios:
+            return np.zeros(len(self.agg))
+
+        agg_ratios = self.aggregate(ratios)
+        return np.array(agg_ratios)
+
+    def feature_base_labels(self) -> List[str]:
+        return ["sidechainlength_to_star_attachment_distance_ratio"]
+
+
+class StarToSidechainMinDistanceFeaturizer(BaseFeatureCalculator):
+    """Computes aggregated minimum backbone distances from star nodes (*) to sidechains in a polymer. The minimum distance is calculated in terms of edges between the star node and any node in the sidechain."""
+
+    def featurize(self, polymer) -> np.ndarray:
+        graph = polymer.graph
+        star_nodes = [
+            node for node, data in graph.nodes(data=True) if data["element"] == "*"
+        ]
+        sidechain_graphs = polymer.get_backbone_and_sidechain_graphs()[1]
+
+        distances = []
+        for sidechain in sidechain_graphs:
+            valid_dists = [
+                nx.shortest_path_length(graph, star, node) - 1
+                for star in star_nodes
+                for node in sidechain.nodes()
+                if nx.has_path(graph, star, node)
+            ]
+            if valid_dists:
+                distances.append(min(valid_dists))
+
+        if not distances:
+            return np.zeros(len(self.agg))
+
+        return self.aggregate(distances)
+
+    def feature_base_labels(self) -> List[str]:
+        return ["star_to_sidechain_min_distance"]
+
+
+class SidechainDiversityFeaturizer(BaseFeatureCalculator):
+    """Computes the number of structurally diverse sidechains in a polymer based on graph isomorphism. Structural diversity is determined using the Weisfeiler-Lehman graph hash, which identifies
+    non-isomorphic sidechain graphs. Unique sidechain structures are counted, with identical hashes indicating topologically equivalent sidechains."""
+
+    def featurize(self, polymer) -> np.ndarray:
+        sidechain_graphs = polymer.get_backbone_and_sidechain_graphs()[1]
+        unique_hashes = set()
+        for scg in sidechain_graphs:
+            graph_hash = nx.weisfeiler_lehman_graph_hash(scg)
+            unique_hashes.add(graph_hash)
+        return np.array([len(unique_hashes)])
+
+    def feature_labels(self) -> List[str]:
+        return ["num_diverse_sidechains"]
 
 
 class MultipleFeaturizer:
