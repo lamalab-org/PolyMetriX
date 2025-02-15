@@ -31,7 +31,7 @@ class CuratedGlassTempDataset(AbstractDataset):
             "CuratedGlassTempDataset", 
             self._version, 
             url=self._url,
-            name="data.csv",
+            name=".csv",
         )
         self._df = pd.read_csv(str(csv_path)).reset_index(drop=True) 
 
