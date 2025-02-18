@@ -1,10 +1,9 @@
 from typing import List, Optional
 import numpy as np
 from rdkit import Chem
-from rdkit.Chem import Descriptors, GraphDescriptors, AllChem
+from rdkit.Chem import Descriptors, GraphDescriptors
 import networkx as nx
 import logging
-from rdkit.Chem.MolStandardize import rdMolStandardize
 
 
 class BaseFeatureCalculator:
