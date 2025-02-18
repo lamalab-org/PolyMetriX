@@ -1,0 +1,2 @@
+# PolyMetriX
+PolyMetriX is a Python package designed for getting the polymer related featurizers that can be used for downstream tasks. The functionality of this package is that deals with the rdkit mol objects to get desired featurizers on full, sidechain and backbone polymer level. In addition, you can also use curated dataset for glass transition temperature (Tg) data for the polymers using this package.
