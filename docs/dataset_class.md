@@ -42,10 +42,22 @@ The `meta.stdev` column represents the standard deviation of the Tg values for t
 from polymetrix.datasets import CuratedGlassTempDataset
 
 dataset = CuratedGlassTempDataset(version, url)
-features = dataset.get_features()
-target = dataset.get_labels()
+features = dataset.get_features(idx=len(dataset))
+target = dataset.get_labels(idx=len(dataset))
 ```
 This will output the array of features and labels for the dataset, Which can be used for training/testing the model.
+
+
+## Usage example for using subset of the dataset
+
+```python
+from polymetrix.datasets import CuratedGlassTempDataset
+
+dataset = CuratedGlassTempDataset(version, url)
+features = dataset.get_features(idx=10)
+target = dataset.get_labels(idx=10)
+```
+This will output the array of features and labels for the first 10 data points in the dataset, Which can be used for training/testing the model.
 
 
 
