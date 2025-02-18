@@ -49,9 +49,9 @@ dev = [
   "pytest-cov",
   "ruff",
   "bump-my-version",
+  "mkdocs-material",
+  "mkdocstrings[python]",
 ]
-
-docs = ["mkdocs", "mkdocs-material", "mkdocstrings[python]"]
 
 decoder = ["pyxtal"]
 
