@@ -17,6 +17,16 @@ class BaseFeatureCalculator:
     def __init__(self, agg: List[str] = ["sum"]):
         self.agg = agg
 
+    def _sanitize(self, mol: Chem.Mol, sanitize: bool) -> None:
+        """Handle molecule sanitization with kekulization exception handling."""
+        if sanitize:
+            try:
+                Chem.SanitizeMol(
+                    mol, sanitizeOps=Chem.SANITIZE_ALL ^ Chem.SANITIZE_KEKULIZE
+                )
+            except Chem.AtomKekulizeException:
+                mol.UpdatePropertyCache()
+
     def calculate(self, mol: Chem.Mol) -> np.ndarray:
         raise NotImplementedError("Calculate method must be implemented by subclasses")
 
@@ -70,13 +80,7 @@ class BaseFeatureCalculator:
 
 class NumHBondDonors(BaseFeatureCalculator):
     def calculate(self, mol: Chem.Mol, sanitize: bool = True) -> np.ndarray:
-        if sanitize:
-            try:
-                Chem.SanitizeMol(
-                    mol, sanitizeOps=Chem.SANITIZE_ALL ^ Chem.SANITIZE_KEKULIZE
-                )
-            except Chem.AtomKekulizeException:
-                mol.UpdatePropertyCache()
+        self._sanitize(mol, sanitize)
         return np.array([Descriptors.NumHDonors(mol)])
 
     def feature_base_labels(self) -> List[str]:
@@ -85,13 +89,7 @@ class NumHBondDonors(BaseFeatureCalculator):
 
 class NumHBondAcceptors(BaseFeatureCalculator):
     def calculate(self, mol: Chem.Mol, sanitize: bool = True) -> np.ndarray:
-        if sanitize:
-            try:
-                Chem.SanitizeMol(
-                    mol, sanitizeOps=Chem.SANITIZE_ALL ^ Chem.SANITIZE_KEKULIZE
-                )
-            except Chem.AtomKekulizeException:
-                mol.UpdatePropertyCache()
+        self._sanitize(mol, sanitize)
         return np.array([Descriptors.NumHAcceptors(mol)])
 
     def feature_base_labels(self) -> List[str]:
@@ -100,13 +98,7 @@ class NumHBondAcceptors(BaseFeatureCalculator):
 
 class NumRotatableBonds(BaseFeatureCalculator):
     def calculate(self, mol: Chem.Mol, sanitize: bool = True) -> np.ndarray:
-        if sanitize:
-            try:
-                Chem.SanitizeMol(
-                    mol, sanitizeOps=Chem.SANITIZE_ALL ^ Chem.SANITIZE_KEKULIZE
-                )
-            except Chem.AtomKekulizeException:
-                mol.UpdatePropertyCache()
+        self._sanitize(mol, sanitize)
         return np.array([Descriptors.NumRotatableBonds(mol)])
 
     def feature_base_labels(self) -> List[str]:
@@ -115,13 +107,7 @@ class NumRotatableBonds(BaseFeatureCalculator):
 
 class NumRings(BaseFeatureCalculator):
     def calculate(self, mol: Chem.Mol, sanitize: bool = True) -> np.ndarray:
-        if sanitize:
-            try:
-                Chem.SanitizeMol(
-                    mol, sanitizeOps=Chem.SANITIZE_ALL ^ Chem.SANITIZE_KEKULIZE
-                )
-            except Chem.AtomKekulizeException:
-                mol.UpdatePropertyCache()
+        self._sanitize(mol, sanitize)
         ring_info = mol.GetRingInfo()
         num_rings = len(ring_info.AtomRings())
         return np.array([num_rings])
@@ -140,13 +126,7 @@ class NumAtoms(BaseFeatureCalculator):
 
 class NumNonAromaticRings(BaseFeatureCalculator):
     def calculate(self, mol: Chem.Mol, sanitize: bool = True) -> np.ndarray:
-        if sanitize:
-            try:
-                Chem.SanitizeMol(
-                    mol, sanitizeOps=Chem.SANITIZE_ALL ^ Chem.SANITIZE_KEKULIZE
-                )
-            except Chem.AtomKekulizeException:
-                mol.UpdatePropertyCache()
+        self._sanitize(mol, sanitize)
         non_aromatic_rings = sum(
             1
             for ring in mol.GetRingInfo().AtomRings()
@@ -160,13 +140,7 @@ class NumNonAromaticRings(BaseFeatureCalculator):
 
 class NumAromaticRings(BaseFeatureCalculator):
     def calculate(self, mol: Chem.Mol, sanitize: bool = True) -> np.ndarray:
-        if sanitize:
-            try:
-                Chem.SanitizeMol(
-                    mol, sanitizeOps=Chem.SANITIZE_ALL ^ Chem.SANITIZE_KEKULIZE
-                )
-            except Chem.AtomKekulizeException:
-                mol.UpdatePropertyCache()
+        self._sanitize(mol, sanitize)
         aromatic_rings = sum(
             1
             for ring in mol.GetRingInfo().AtomRings()
@@ -180,13 +154,7 @@ class NumAromaticRings(BaseFeatureCalculator):
 
 class TopologicalSurfaceArea(BaseFeatureCalculator):
     def calculate(self, mol: Chem.Mol, sanitize: bool = True) -> np.ndarray:
-        if sanitize:
-            try:
-                Chem.SanitizeMol(
-                    mol, sanitizeOps=Chem.SANITIZE_ALL ^ Chem.SANITIZE_KEKULIZE
-                )
-            except Chem.AtomKekulizeException:
-                mol.UpdatePropertyCache()
+        self._sanitize(mol, sanitize)
         return np.array([Descriptors.TPSA(mol)])
 
     def feature_base_labels(self) -> List[str]:
@@ -195,13 +163,7 @@ class TopologicalSurfaceArea(BaseFeatureCalculator):
 
 class FractionBicyclicRings(BaseFeatureCalculator):
     def calculate(self, mol: Chem.Mol, sanitize: bool = True) -> np.ndarray:
-        if sanitize:
-            try:
-                Chem.SanitizeMol(
-                    mol, sanitizeOps=Chem.SANITIZE_ALL ^ Chem.SANITIZE_KEKULIZE
-                )
-            except Chem.AtomKekulizeException:
-                mol.UpdatePropertyCache()
+        self._sanitize(mol, sanitize)
         ring_info = mol.GetRingInfo()
         atom_rings = ring_info.AtomRings()
         bicyclic_count = 0
@@ -221,13 +183,7 @@ class FractionBicyclicRings(BaseFeatureCalculator):
 
 class NumAliphaticHeterocycles(BaseFeatureCalculator):
     def calculate(self, mol: Chem.Mol, sanitize: bool = True) -> np.ndarray:
-        if sanitize:
-            try:
-                Chem.SanitizeMol(
-                    mol, sanitizeOps=Chem.SANITIZE_ALL ^ Chem.SANITIZE_KEKULIZE
-                )
-            except Chem.AtomKekulizeException:
-                mol.UpdatePropertyCache()
+        self._sanitize(mol, sanitize)
         num_heterocycles = 0
         for ring in mol.GetRingInfo().AtomRings():
             if any(mol.GetAtomWithIdx(atom).GetAtomicNum() != 6 for atom in ring):
@@ -240,13 +196,7 @@ class NumAliphaticHeterocycles(BaseFeatureCalculator):
 
 class SlogPVSA1(BaseFeatureCalculator):
     def calculate(self, mol: Chem.Mol, sanitize: bool = True) -> np.ndarray:
-        if sanitize:
-            try:
-                Chem.SanitizeMol(
-                    mol, sanitizeOps=Chem.SANITIZE_ALL ^ Chem.SANITIZE_KEKULIZE
-                )
-            except Chem.AtomKekulizeException:
-                mol.UpdatePropertyCache()
+        self._sanitize(mol, sanitize)
         return np.array([Descriptors.SlogP_VSA1(mol)])
 
     def feature_base_labels(self) -> List[str]:
@@ -255,13 +205,7 @@ class SlogPVSA1(BaseFeatureCalculator):
 
 class BalabanJIndex(BaseFeatureCalculator):
     def calculate(self, mol: Chem.Mol, sanitize: bool = True) -> np.ndarray:
-        if sanitize:
-            try:
-                Chem.SanitizeMol(
-                    mol, sanitizeOps=Chem.SANITIZE_ALL ^ Chem.SANITIZE_KEKULIZE
-                )
-            except Chem.AtomKekulizeException:
-                mol.UpdatePropertyCache()
+        self._sanitize(mol, sanitize)
         return np.array([GraphDescriptors.BalabanJ(mol)])
 
     def feature_base_labels(self) -> List[str]:
@@ -270,13 +214,7 @@ class BalabanJIndex(BaseFeatureCalculator):
 
 class MolecularWeightFeaturizer(BaseFeatureCalculator):
     def calculate(self, mol: Chem.Mol, sanitize: bool = True) -> np.ndarray:
-        if sanitize:
-            try:
-                Chem.SanitizeMol(
-                    mol, sanitizeOps=Chem.SANITIZE_ALL ^ Chem.SANITIZE_KEKULIZE
-                )
-            except Chem.AtomKekulizeException:
-                mol.UpdatePropertyCache()
+        self._sanitize(mol, sanitize)
         return np.array([Descriptors.ExactMolWt(mol)])
 
     def feature_base_labels(self) -> List[str]:
@@ -285,13 +223,7 @@ class MolecularWeightFeaturizer(BaseFeatureCalculator):
 
 class Sp3CarbonCountFeaturizer(BaseFeatureCalculator):
     def calculate(self, mol: Chem.Mol, sanitize: bool = True) -> np.ndarray:
-        if sanitize:
-            try:
-                Chem.SanitizeMol(
-                    mol, sanitizeOps=Chem.SANITIZE_ALL ^ Chem.SANITIZE_KEKULIZE
-                )
-            except Chem.AtomKekulizeException:
-                mol.UpdatePropertyCache()
+        self._sanitize(mol, sanitize)
         sp3_count = sum(
             1
             for atom in mol.GetAtoms()
@@ -305,13 +237,7 @@ class Sp3CarbonCountFeaturizer(BaseFeatureCalculator):
 
 class Sp2CarbonCountFeaturizer(BaseFeatureCalculator):
     def calculate(self, mol: Chem.Mol, sanitize: bool = True) -> np.ndarray:
-        if sanitize:
-            try:
-                Chem.SanitizeMol(
-                    mol, sanitizeOps=Chem.SANITIZE_ALL ^ Chem.SANITIZE_KEKULIZE
-                )
-            except Chem.AtomKekulizeException:
-                mol.UpdatePropertyCache()
+        self._sanitize(mol, sanitize)
         sp2_count = sum(
             1
             for atom in mol.GetAtoms()
@@ -325,13 +251,7 @@ class Sp2CarbonCountFeaturizer(BaseFeatureCalculator):
 
 class MaxEStateIndex(BaseFeatureCalculator):
     def calculate(self, mol: Chem.Mol, sanitize: bool = True) -> np.ndarray:
-        if sanitize:
-            try:
-                Chem.SanitizeMol(
-                    mol, sanitizeOps=Chem.SANITIZE_ALL ^ Chem.SANITIZE_KEKULIZE
-                )
-            except Chem.AtomKekulizeException:
-                mol.UpdatePropertyCache()
+        self._sanitize(mol, sanitize)
         return np.array([Descriptors.MaxEStateIndex(mol)])
 
     def feature_base_labels(self) -> List[str]:
@@ -340,13 +260,7 @@ class MaxEStateIndex(BaseFeatureCalculator):
 
 class SMR_VSA5(BaseFeatureCalculator):
     def calculate(self, mol: Chem.Mol, sanitize: bool = True) -> np.ndarray:
-        if sanitize:
-            try:
-                Chem.SanitizeMol(
-                    mol, sanitizeOps=Chem.SANITIZE_ALL ^ Chem.SANITIZE_KEKULIZE
-                )
-            except Chem.AtomKekulizeException:
-                mol.UpdatePropertyCache()
+        self._sanitize(mol, sanitize)
         return np.array([Descriptors.SMR_VSA5(mol)])
 
     def feature_base_labels(self) -> List[str]:
@@ -355,13 +269,7 @@ class SMR_VSA5(BaseFeatureCalculator):
 
 class FpDensityMorgan1(BaseFeatureCalculator):
     def calculate(self, mol: Chem.Mol, sanitize: bool = True) -> np.ndarray:
-        if sanitize:
-            try:
-                Chem.SanitizeMol(
-                    mol, sanitizeOps=Chem.SANITIZE_ALL ^ Chem.SANITIZE_KEKULIZE
-                )
-            except Chem.AtomKekulizeException:
-                mol.UpdatePropertyCache()
+        self._sanitize(mol, sanitize)
         return np.array([Descriptors.FpDensityMorgan1(mol)])
 
     def feature_base_labels(self) -> List[str]:
@@ -374,13 +282,7 @@ class HeteroatomCount(BaseFeatureCalculator):
         return sum(1 for atom in mol.GetAtoms() if atom.GetAtomicNum() != 6)
 
     def calculate(self, mol: Chem.Mol, sanitize: bool = True) -> np.ndarray:
-        if sanitize:
-            try:
-                Chem.SanitizeMol(
-                    mol, sanitizeOps=Chem.SANITIZE_ALL ^ Chem.SANITIZE_KEKULIZE
-                )
-            except Chem.AtomKekulizeException:
-                mol.UpdatePropertyCache()
+        self._sanitize(mol, sanitize)
         return np.array([HeteroatomCount.count_heteroatoms(mol)])
 
     def feature_base_labels(self) -> List[str]:
@@ -393,13 +295,7 @@ class HeteroatomDensity(BaseFeatureCalculator):
         return sum(1 for atom in mol.GetAtoms() if atom.GetAtomicNum() != 6)
 
     def calculate(self, mol: Chem.Mol, sanitize: bool = True) -> np.ndarray:
-        if sanitize:
-            try:
-                Chem.SanitizeMol(
-                    mol, sanitizeOps=Chem.SANITIZE_ALL ^ Chem.SANITIZE_KEKULIZE
-                )
-            except Chem.AtomKekulizeException:
-                mol.UpdatePropertyCache()
+        self._sanitize(mol, sanitize)
         num_atoms = mol.GetNumAtoms()
         num_heteroatoms = HeteroatomDensity.count_heteroatoms(mol)
         density = num_heteroatoms / num_atoms if num_atoms > 0 else 0
@@ -411,30 +307,23 @@ class HeteroatomDensity(BaseFeatureCalculator):
 
 class HalogenCounts(BaseFeatureCalculator):
     def calculate(self, mol: Chem.Mol, sanitize: bool = True) -> np.ndarray:
-        if sanitize:
-            try:
-                Chem.SanitizeMol(
-                    mol, sanitizeOps=Chem.SANITIZE_ALL ^ Chem.SANITIZE_KEKULIZE
-                )
-            except Chem.AtomKekulizeException:
-                mol.UpdatePropertyCache()
-            halogen_counts = {9: 0, 17: 0, 35: 0, 53: 0}  # F, Cl, Br, I
-            for atom in mol.GetAtoms():
-                atomic_num = atom.GetAtomicNum()
-                if atomic_num in halogen_counts:
-                    halogen_counts[atomic_num] += 1
+        self._sanitize(mol, sanitize)
+        halogen_counts = {9: 0, 17: 0, 35: 0, 53: 0}  # F, Cl, Br, I
+        for atom in mol.GetAtoms():
+            atomic_num = atom.GetAtomicNum()
+            if atomic_num in halogen_counts:
+                halogen_counts[atomic_num] += 1
 
-            total_halogens = sum(halogen_counts.values())
+        total_halogens = sum(halogen_counts.values())
 
-            return np.array(
-                [
-                    total_halogens,
-                    halogen_counts[9],
-                    halogen_counts[17],
-                    halogen_counts[35],
-                ]
-            )
-        return np.array([0, 0, 0, 0])
+        return np.array(
+            [
+                total_halogens,
+                halogen_counts[9],
+                halogen_counts[17],
+                halogen_counts[35],
+            ]
+        )
 
     def feature_base_labels(self) -> List[str]:
         return ["total_halogens", "fluorine_count", "chlorine_count", "bromine_count"]
@@ -442,28 +331,21 @@ class HalogenCounts(BaseFeatureCalculator):
 
 class BondCounts(BaseFeatureCalculator):
     def calculate(self, mol: Chem.Mol, sanitize: bool = True) -> np.ndarray:
-        if sanitize:
-            try:
-                Chem.SanitizeMol(
-                    mol, sanitizeOps=Chem.SANITIZE_ALL ^ Chem.SANITIZE_KEKULIZE
-                )
-            except Chem.AtomKekulizeException:
-                mol.UpdatePropertyCache()
-            single_bonds = 0
-            double_bonds = 0
-            triple_bonds = 0
+        self._sanitize(mol, sanitize)
+        single_bonds = 0
+        double_bonds = 0
+        triple_bonds = 0
 
-            for bond in mol.GetBonds():
-                bond_type = bond.GetBondType()
-                if bond_type == Chem.BondType.SINGLE:
-                    single_bonds += 1
-                elif bond_type == Chem.BondType.DOUBLE:
-                    double_bonds += 1
-                elif bond_type == Chem.BondType.TRIPLE:
-                    triple_bonds += 1
+        for bond in mol.GetBonds():
+            bond_type = bond.GetBondType()
+            if bond_type == Chem.BondType.SINGLE:
+                single_bonds += 1
+            elif bond_type == Chem.BondType.DOUBLE:
+                double_bonds += 1
+            elif bond_type == Chem.BondType.TRIPLE:
+                triple_bonds += 1
 
-            return np.array([single_bonds, double_bonds, triple_bonds])
-        return np.array([0, 0, 0])
+        return np.array([single_bonds, double_bonds, triple_bonds])
 
     def feature_base_labels(self) -> List[str]:
         return ["single_bonds", "double_bonds", "triple_bonds"]
@@ -471,25 +353,18 @@ class BondCounts(BaseFeatureCalculator):
 
 class BridgingRingsCount(BaseFeatureCalculator):
     def calculate(self, mol: Chem.Mol, sanitize: bool = True) -> np.ndarray:
-        if sanitize:
-            try:
-                Chem.SanitizeMol(
-                    mol, sanitizeOps=Chem.SANITIZE_ALL ^ Chem.SANITIZE_KEKULIZE
-                )
-            except Chem.AtomKekulizeException:
-                mol.UpdatePropertyCache()
-            ring_info = mol.GetRingInfo()
-            rings = ring_info.AtomRings()
-            bridging_rings = 0
+        self._sanitize(mol, sanitize)
+        ring_info = mol.GetRingInfo()
+        rings = ring_info.AtomRings()
+        bridging_rings = 0
 
-            for i in range(len(rings)):
-                for j in range(i + 1, len(rings)):
-                    if len(set(rings[i]) & set(rings[j])) >= 2:
-                        bridging_rings += 1
-                        break
+        for i in range(len(rings)):
+            for j in range(i + 1, len(rings)):
+                if len(set(rings[i]) & set(rings[j])) >= 2:
+                    bridging_rings += 1
+                    break
 
-            return np.array([bridging_rings])
-        return np.array([0])
+        return np.array([bridging_rings])
 
     def feature_base_labels(self) -> List[str]:
         return ["bridging_rings_count"]
@@ -497,22 +372,15 @@ class BridgingRingsCount(BaseFeatureCalculator):
 
 class MaxRingSize(BaseFeatureCalculator):
     def calculate(self, mol: Chem.Mol, sanitize: bool = True) -> np.ndarray:
-        if sanitize:
-            try:
-                Chem.SanitizeMol(
-                    mol, sanitizeOps=Chem.SANITIZE_ALL ^ Chem.SANITIZE_KEKULIZE
-                )
-            except Chem.AtomKekulizeException:
-                mol.UpdatePropertyCache()
-            ring_info = mol.GetRingInfo()
-            rings = ring_info.AtomRings()
+        self._sanitize(mol, sanitize)
+        ring_info = mol.GetRingInfo()
+        rings = ring_info.AtomRings()
 
-            if not rings:
-                return np.array([0])
+        if not rings:
+            return np.array([0])
 
-            max_size = max(len(ring) for ring in rings)
-            return np.array([max_size])
-        return np.array([0])
+        max_size = max(len(ring) for ring in rings)
+        return np.array([max_size])
 
     def feature_base_labels(self) -> List[str]:
         return ["max_ring_size"]
