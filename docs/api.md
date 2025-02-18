@@ -1,4 +1,4 @@
-The installation and usage of the gettting the featurizers and dataset is described in the following sections.
+The installation and usage of the getting the featurizers and dataset is described in the following sections.
 
 # Installation
 The most recent code can be installed directly from GitHub with:
