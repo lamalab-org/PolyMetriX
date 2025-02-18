@@ -1,9 +1,9 @@
 from typing import List, Optional
 import numpy as np
 from rdkit import Chem
-from rdkit.Chem import Descriptors, GraphDescriptors, AllChem
-import logging
+from rdkit.Chem import Descriptors, GraphDescriptors
 import networkx as nx
+import logging
 
 
 class BaseFeatureCalculator:
@@ -16,6 +16,16 @@ class BaseFeatureCalculator:
 
     def __init__(self, agg: List[str] = ["sum"]):
         self.agg = agg
+
+    def _sanitize(self, mol: Chem.Mol, sanitize: bool) -> None:
+        """Handle molecule sanitization with kekulization exception handling."""
+        if sanitize:
+            try:
+                Chem.SanitizeMol(
+                    mol, sanitizeOps=Chem.SANITIZE_ALL ^ Chem.SANITIZE_KEKULIZE
+                )
+            except Chem.AtomKekulizeException:
+                mol.UpdatePropertyCache()
 
     def calculate(self, mol: Chem.Mol) -> np.ndarray:
         raise NotImplementedError("Calculate method must be implemented by subclasses")
@@ -69,8 +79,8 @@ class BaseFeatureCalculator:
 
 
 class NumHBondDonors(BaseFeatureCalculator):
-    def calculate(self, mol: Chem.Mol) -> np.ndarray:
-        Chem.SanitizeMol(mol)
+    def calculate(self, mol: Chem.Mol, sanitize: bool = True) -> np.ndarray:
+        self._sanitize(mol, sanitize)
         return np.array([Descriptors.NumHDonors(mol)])
 
     def feature_base_labels(self) -> List[str]:
@@ -78,8 +88,8 @@ class NumHBondDonors(BaseFeatureCalculator):
 
 
 class NumHBondAcceptors(BaseFeatureCalculator):
-    def calculate(self, mol: Chem.Mol) -> np.ndarray:
-        Chem.SanitizeMol(mol)
+    def calculate(self, mol: Chem.Mol, sanitize: bool = True) -> np.ndarray:
+        self._sanitize(mol, sanitize)
         return np.array([Descriptors.NumHAcceptors(mol)])
 
     def feature_base_labels(self) -> List[str]:
@@ -87,8 +97,8 @@ class NumHBondAcceptors(BaseFeatureCalculator):
 
 
 class NumRotatableBonds(BaseFeatureCalculator):
-    def calculate(self, mol: Chem.Mol) -> np.ndarray:
-        Chem.SanitizeMol(mol)
+    def calculate(self, mol: Chem.Mol, sanitize: bool = True) -> np.ndarray:
+        self._sanitize(mol, sanitize)
         return np.array([Descriptors.NumRotatableBonds(mol)])
 
     def feature_base_labels(self) -> List[str]:
@@ -96,8 +106,8 @@ class NumRotatableBonds(BaseFeatureCalculator):
 
 
 class NumRings(BaseFeatureCalculator):
-    def calculate(self, mol: Chem.Mol) -> np.ndarray:
-        Chem.SanitizeMol(mol)
+    def calculate(self, mol: Chem.Mol, sanitize: bool = True) -> np.ndarray:
+        self._sanitize(mol, sanitize)
         ring_info = mol.GetRingInfo()
         num_rings = len(ring_info.AtomRings())
         return np.array([num_rings])
@@ -107,7 +117,7 @@ class NumRings(BaseFeatureCalculator):
 
 
 class NumAtoms(BaseFeatureCalculator):
-    def calculate(self, mol: Chem.Mol) -> np.ndarray:
+    def calculate(self, mol: Chem.Mol, sanitize: bool = False) -> np.ndarray:
         return np.array([mol.GetNumAtoms()])
 
     def feature_base_labels(self) -> List[str]:
@@ -115,8 +125,8 @@ class NumAtoms(BaseFeatureCalculator):
 
 
 class NumNonAromaticRings(BaseFeatureCalculator):
-    def calculate(self, mol: Chem.Mol) -> np.ndarray:
-        Chem.SanitizeMol(mol)
+    def calculate(self, mol: Chem.Mol, sanitize: bool = True) -> np.ndarray:
+        self._sanitize(mol, sanitize)
         non_aromatic_rings = sum(
             1
             for ring in mol.GetRingInfo().AtomRings()
@@ -129,8 +139,8 @@ class NumNonAromaticRings(BaseFeatureCalculator):
 
 
 class NumAromaticRings(BaseFeatureCalculator):
-    def calculate(self, mol: Chem.Mol) -> np.ndarray:
-        Chem.SanitizeMol(mol)
+    def calculate(self, mol: Chem.Mol, sanitize: bool = True) -> np.ndarray:
+        self._sanitize(mol, sanitize)
         aromatic_rings = sum(
             1
             for ring in mol.GetRingInfo().AtomRings()
@@ -143,8 +153,8 @@ class NumAromaticRings(BaseFeatureCalculator):
 
 
 class TopologicalSurfaceArea(BaseFeatureCalculator):
-    def calculate(self, mol: Chem.Mol) -> np.ndarray:
-        Chem.SanitizeMol(mol)
+    def calculate(self, mol: Chem.Mol, sanitize: bool = True) -> np.ndarray:
+        self._sanitize(mol, sanitize)
         return np.array([Descriptors.TPSA(mol)])
 
     def feature_base_labels(self) -> List[str]:
@@ -152,8 +162,8 @@ class TopologicalSurfaceArea(BaseFeatureCalculator):
 
 
 class FractionBicyclicRings(BaseFeatureCalculator):
-    def calculate(self, mol: Chem.Mol) -> np.ndarray:
-        Chem.SanitizeMol(mol)
+    def calculate(self, mol: Chem.Mol, sanitize: bool = True) -> np.ndarray:
+        self._sanitize(mol, sanitize)
         ring_info = mol.GetRingInfo()
         atom_rings = ring_info.AtomRings()
         bicyclic_count = 0
@@ -162,8 +172,7 @@ class FractionBicyclicRings(BaseFeatureCalculator):
             for ring2 in atom_rings[i + 1 :]:
                 if set(ring1).intersection(set(ring2)):
                     bicyclic_count += 1
-                    break  # Count each bicyclic structure only once
-
+                    break
         total_rings = len(atom_rings)
         fraction_bicyclic = bicyclic_count / total_rings if total_rings > 0 else 0
         return np.array([fraction_bicyclic])
@@ -173,8 +182,8 @@ class FractionBicyclicRings(BaseFeatureCalculator):
 
 
 class NumAliphaticHeterocycles(BaseFeatureCalculator):
-    def calculate(self, mol: Chem.Mol) -> np.ndarray:
-        Chem.SanitizeMol(mol)
+    def calculate(self, mol: Chem.Mol, sanitize: bool = True) -> np.ndarray:
+        self._sanitize(mol, sanitize)
         num_heterocycles = 0
         for ring in mol.GetRingInfo().AtomRings():
             if any(mol.GetAtomWithIdx(atom).GetAtomicNum() != 6 for atom in ring):
@@ -186,8 +195,8 @@ class NumAliphaticHeterocycles(BaseFeatureCalculator):
 
 
 class SlogPVSA1(BaseFeatureCalculator):
-    def calculate(self, mol: Chem.Mol) -> np.ndarray:
-        Chem.SanitizeMol(mol)
+    def calculate(self, mol: Chem.Mol, sanitize: bool = True) -> np.ndarray:
+        self._sanitize(mol, sanitize)
         return np.array([Descriptors.SlogP_VSA1(mol)])
 
     def feature_base_labels(self) -> List[str]:
@@ -195,8 +204,8 @@ class SlogPVSA1(BaseFeatureCalculator):
 
 
 class BalabanJIndex(BaseFeatureCalculator):
-    def calculate(self, mol: Chem.Mol) -> np.ndarray:
-        Chem.SanitizeMol(mol)
+    def calculate(self, mol: Chem.Mol, sanitize: bool = True) -> np.ndarray:
+        self._sanitize(mol, sanitize)
         return np.array([GraphDescriptors.BalabanJ(mol)])
 
     def feature_base_labels(self) -> List[str]:
@@ -204,8 +213,8 @@ class BalabanJIndex(BaseFeatureCalculator):
 
 
 class MolecularWeightFeaturizer(BaseFeatureCalculator):
-    def calculate(self, mol: Chem.Mol) -> np.ndarray:
-        Chem.SanitizeMol(mol)
+    def calculate(self, mol: Chem.Mol, sanitize: bool = True) -> np.ndarray:
+        self._sanitize(mol, sanitize)
         return np.array([Descriptors.ExactMolWt(mol)])
 
     def feature_base_labels(self) -> List[str]:
@@ -213,8 +222,8 @@ class MolecularWeightFeaturizer(BaseFeatureCalculator):
 
 
 class Sp3CarbonCountFeaturizer(BaseFeatureCalculator):
-    def calculate(self, mol: Chem.Mol) -> np.ndarray:
-        Chem.SanitizeMol(mol)
+    def calculate(self, mol: Chem.Mol, sanitize: bool = True) -> np.ndarray:
+        self._sanitize(mol, sanitize)
         sp3_count = sum(
             1
             for atom in mol.GetAtoms()
@@ -227,8 +236,8 @@ class Sp3CarbonCountFeaturizer(BaseFeatureCalculator):
 
 
 class Sp2CarbonCountFeaturizer(BaseFeatureCalculator):
-    def calculate(self, mol: Chem.Mol) -> np.ndarray:
-        Chem.SanitizeMol(mol)
+    def calculate(self, mol: Chem.Mol, sanitize: bool = True) -> np.ndarray:
+        self._sanitize(mol, sanitize)
         sp2_count = sum(
             1
             for atom in mol.GetAtoms()
@@ -241,8 +250,8 @@ class Sp2CarbonCountFeaturizer(BaseFeatureCalculator):
 
 
 class MaxEStateIndex(BaseFeatureCalculator):
-    def calculate(self, mol: Chem.Mol) -> np.ndarray:
-        Chem.SanitizeMol(mol)
+    def calculate(self, mol: Chem.Mol, sanitize: bool = True) -> np.ndarray:
+        self._sanitize(mol, sanitize)
         return np.array([Descriptors.MaxEStateIndex(mol)])
 
     def feature_base_labels(self) -> List[str]:
@@ -250,8 +259,8 @@ class MaxEStateIndex(BaseFeatureCalculator):
 
 
 class SMR_VSA5(BaseFeatureCalculator):
-    def calculate(self, mol: Chem.Mol) -> np.ndarray:
-        Chem.SanitizeMol(mol)
+    def calculate(self, mol: Chem.Mol, sanitize: bool = True) -> np.ndarray:
+        self._sanitize(mol, sanitize)
         return np.array([Descriptors.SMR_VSA5(mol)])
 
     def feature_base_labels(self) -> List[str]:
@@ -259,8 +268,8 @@ class SMR_VSA5(BaseFeatureCalculator):
 
 
 class FpDensityMorgan1(BaseFeatureCalculator):
-    def calculate(self, mol: Chem.Mol) -> np.ndarray:
-        Chem.SanitizeMol(mol)
+    def calculate(self, mol: Chem.Mol, sanitize: bool = True) -> np.ndarray:
+        self._sanitize(mol, sanitize)
         return np.array([Descriptors.FpDensityMorgan1(mol)])
 
     def feature_base_labels(self) -> List[str]:
@@ -272,8 +281,8 @@ class HeteroatomCount(BaseFeatureCalculator):
     def count_heteroatoms(mol: Chem.Mol) -> int:
         return sum(1 for atom in mol.GetAtoms() if atom.GetAtomicNum() != 6)
 
-    def calculate(self, mol: Chem.Mol) -> np.ndarray:
-        Chem.SanitizeMol(mol)
+    def calculate(self, mol: Chem.Mol, sanitize: bool = True) -> np.ndarray:
+        self._sanitize(mol, sanitize)
         return np.array([HeteroatomCount.count_heteroatoms(mol)])
 
     def feature_base_labels(self) -> List[str]:
@@ -285,8 +294,8 @@ class HeteroatomDensity(BaseFeatureCalculator):
     def count_heteroatoms(mol: Chem.Mol) -> int:
         return sum(1 for atom in mol.GetAtoms() if atom.GetAtomicNum() != 6)
 
-    def calculate(self, mol: Chem.Mol) -> np.ndarray:
-        Chem.SanitizeMol(mol)
+    def calculate(self, mol: Chem.Mol, sanitize: bool = True) -> np.ndarray:
+        self._sanitize(mol, sanitize)
         num_atoms = mol.GetNumAtoms()
         num_heteroatoms = HeteroatomDensity.count_heteroatoms(mol)
         density = num_heteroatoms / num_atoms if num_atoms > 0 else 0
@@ -296,43 +305,9 @@ class HeteroatomDensity(BaseFeatureCalculator):
         return ["heteroatom_density"]
 
 
-class HeteroatomDistanceStats(BaseFeatureCalculator):
-    def calculate(self, mol: Chem.Mol) -> np.ndarray:
-        Chem.SanitizeMol(mol)
-        heteroatom_indices = [
-            atom.GetIdx()
-            for atom in mol.GetAtoms()
-            if atom.GetAtomicNum() not in [1, 6]
-        ]
-
-        if len(heteroatom_indices) < 2:
-            return np.array([0] * len(self.agg))
-
-        if mol.GetNumConformers() == 0:
-            AllChem.Compute2DCoords(mol)
-
-        conf = mol.GetConformer()
-        distances = []
-
-        for i in range(len(heteroatom_indices)):
-            for j in range(i + 1, len(heteroatom_indices)):
-                pos1 = conf.GetAtomPosition(heteroatom_indices[i])
-                pos2 = conf.GetAtomPosition(heteroatom_indices[j])
-                distance = ((pos1.x - pos2.x) ** 2 + (pos1.y - pos2.y) ** 2) ** 0.5
-                distances.append(distance)
-
-        if not distances:
-            return np.array([0] * len(self.agg))
-
-        return self.aggregate(distances)
-
-    def feature_base_labels(self) -> List[str]:
-        return [f"heteroatom_distance"]
-
-
 class HalogenCounts(BaseFeatureCalculator):
-    def calculate(self, mol: Chem.Mol) -> np.ndarray:
-        Chem.SanitizeMol(mol)
+    def calculate(self, mol: Chem.Mol, sanitize: bool = True) -> np.ndarray:
+        self._sanitize(mol, sanitize)
         halogen_counts = {9: 0, 17: 0, 35: 0, 53: 0}  # F, Cl, Br, I
         for atom in mol.GetAtoms():
             atomic_num = atom.GetAtomicNum()
@@ -340,8 +315,14 @@ class HalogenCounts(BaseFeatureCalculator):
                 halogen_counts[atomic_num] += 1
 
         total_halogens = sum(halogen_counts.values())
+
         return np.array(
-            [total_halogens, halogen_counts[9], halogen_counts[17], halogen_counts[35]]
+            [
+                total_halogens,
+                halogen_counts[9],
+                halogen_counts[17],
+                halogen_counts[35],
+            ]
         )
 
     def feature_base_labels(self) -> List[str]:
@@ -349,8 +330,8 @@ class HalogenCounts(BaseFeatureCalculator):
 
 
 class BondCounts(BaseFeatureCalculator):
-    def calculate(self, mol: Chem.Mol) -> np.ndarray:
-        Chem.SanitizeMol(mol)
+    def calculate(self, mol: Chem.Mol, sanitize: bool = True) -> np.ndarray:
+        self._sanitize(mol, sanitize)
         single_bonds = 0
         double_bonds = 0
         triple_bonds = 0
@@ -371,8 +352,8 @@ class BondCounts(BaseFeatureCalculator):
 
 
 class BridgingRingsCount(BaseFeatureCalculator):
-    def calculate(self, mol: Chem.Mol) -> np.ndarray:
-        Chem.SanitizeMol(mol)
+    def calculate(self, mol: Chem.Mol, sanitize: bool = True) -> np.ndarray:
+        self._sanitize(mol, sanitize)
         ring_info = mol.GetRingInfo()
         rings = ring_info.AtomRings()
         bridging_rings = 0
@@ -390,8 +371,8 @@ class BridgingRingsCount(BaseFeatureCalculator):
 
 
 class MaxRingSize(BaseFeatureCalculator):
-    def calculate(self, mol: Chem.Mol) -> np.ndarray:
-        Chem.SanitizeMol(mol)
+    def calculate(self, mol: Chem.Mol, sanitize: bool = True) -> np.ndarray:
+        self._sanitize(mol, sanitize)
         ring_info = mol.GetRingInfo()
         rings = ring_info.AtomRings()
 

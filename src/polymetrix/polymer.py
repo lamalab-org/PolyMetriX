@@ -2,8 +2,6 @@ from collections import OrderedDict
 from typing import List, Optional, Tuple
 
 import networkx as nx
-import numpy as np
-from rdkit.Chem import AllChem
 from rdkit import Chem
 from rdkit.Chem.Descriptors import ExactMolWt
 
@@ -43,13 +41,18 @@ class Polymer:
         G = nx.Graph()
         for atom in mol.GetAtoms():
             G.add_node(
-                atom.GetIdx(), atomic_num=atom.GetAtomicNum(), element=atom.GetSymbol()
+                atom.GetIdx(),
+                atomic_num=atom.GetAtomicNum(),
+                element=atom.GetSymbol(),
+                formal_charge=atom.GetFormalCharge(),
+                is_aromatic=atom.GetIsAromatic(),
             )
         for bond in mol.GetBonds():
             G.add_edge(
                 bond.GetBeginAtomIdx(),
                 bond.GetEndAtomIdx(),
                 bond_type=bond.GetBondType(),
+                is_aromatic=bond.GetIsAromatic(),
             )
         return G
 
@@ -104,6 +107,10 @@ class Polymer:
         node_to_idx = {}
         for node in subgraph.nodes():
             atom = Chem.Atom(subgraph.nodes[node]["atomic_num"])
+            if "formal_charge" in subgraph.nodes[node]:
+                atom.SetFormalCharge(
+                    subgraph.nodes[node]["formal_charge"]
+                )
             idx = mol.AddAtom(atom)
             node_to_idx[node] = idx
         for u, v, data in subgraph.edges(data=True):
