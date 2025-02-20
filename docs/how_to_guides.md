@@ -1,20 +1,29 @@
 
+# How To Guides
 
-# Usage example for getting the single featurizer for the full polymer level
-```python
+## Featurization 
+
+### Applying a single featurizer to a polymer
+
+``` python
 from polymetrix.featurizer import FullPolymerFeaturizer, MolecularWeightFeaturizer, 
 
 # initialize the FullPolymerFeaturizer class with required featurizers
-featurizer = FullPolymerFeaturizer(MolecularWeightFeaturizer())
+featurizer = FullPolymerFeaturizer(MolecularWeightFeaturizer()) # (1)
 
-polymer = Polymer.from_psmiles('*CCCCCCNC(=O)c1ccc(C(=O)N*)c(Sc2ccccc2)c1')
+polymer = Polymer.from_psmiles('*CCCCCCNC(=O)c1ccc(C(=O)N*)c(Sc2ccccc2)c1') # (2)
 result = featurizer.featurize(polymer)
 ```
+
+1. `polymetrix` uses `Featurizer` objects similar to `matminer` or `mofdscribe`, which follows the `sklearn` API. The `FullPolymerFeaturizer` class is used to apply a featurizer to the entire polymer repeating unit. 
+2. `polymetrix` is built around the `Polymer` class, which is used to represent a polymer molecule. The `from_psmiles` method is used to create a polymer molecule from a polymer SMILES string.
+
 The result will be a NumPy array of MolecularWeightFeaturizer value for the given polymer.
 
 
-# Example for getting the multiple featurizers for the full polymer level
-```python
+### Combining multiple featurizers for a polymer
+
+``` python
 from polymetrix.featurizer import FullPolymerFeaturizer, MultipleFeaturizer, MolecularWeightFeaturizer, NumHBondDonors, NumHBondAcceptors, NumRotatableBonds
 
 # initialize the FullPolymerFeaturizer class with required featurizers
@@ -23,14 +32,19 @@ hbond_donors = FullPolymerFeaturizer(NumHBondDonors())
 hbond_acceptors = FullPolymerFeaturizer(NumHBondAcceptors())
 rotatable_bonds = FullPolymerFeaturizer(NumRotatableBonds())
 
-featurizer = MultipleFeaturizer([mol_weight_featurizer, hbond_donors, hbond_acceptors, rotatable_bonds])
+featurizer = MultipleFeaturizer([mol_weight_featurizer, hbond_donors, hbond_acceptors, rotatable_bonds]) # (1)
 polymer = Polymer.from_psmiles('*CCCCCCNC(=O)c1ccc(C(=O)N*)c(Sc2ccccc2)c1')
 result = featurizer.featurize(polymer)
 ```
-The result will be a NumPy array of mol_weight_featurizer, hbond_donors, hbond_acceptors, rotatable_bonds values for the given polymer.
 
-# Example for getting the featurizers for the sidechain level of the polymer that is number and length of sidechains
-```python
+1. The advantage of using `MultipleFeaturizer` is that it allows you to combine multiple featurizers into a single featurizer object. This way, you can apply multiple featurizers to the polymer in a single step. The `MultipleFeaturizer` behaves like a "regular" featurizer, so you can use it in the same way as a single featurizer.
+
+
+The result will be a NumPy array of `mol_weight_featurizer, hbond_donors, hbond_acceptors, rotatable_bonds` values for the given polymer.
+
+### Featurizers for the sidechain level of the polymer
+
+``` python
 from polymetrix.featurizer import SideChainFeaturizer, NumSideChainFeaturizer, MultipleFeaturizer, NumAtoms
 
 # initialize the SideChainFeaturizer class with required featurizers
@@ -41,11 +55,12 @@ featurizer = MultipleFeaturizer([num_sidechains, sidechain_length])
 polymer = Polymer.from_psmiles('*CCCCCCCCOc1ccc(C(c2ccc(O*)cc2)(C(F)(F)F)C(F)(F)F)cc1')
 result = featurizer.featurize(polymer)
 ```
-The result will be a NumPy array of num_sidechains and sidechain_length values for the given polymer.
+The result will be a NumPy array of `num_sidechains` and `sidechain_length` values for the given polymer.
 
 
-# Example for getting the featurizers for the backbone level of the polymer that is number and length of backbone atoms
-```python
+### Featurizers for the backbone level of the polymer
+
+``` python
 from polymetrix.featurizer import BackBoneFeaturizer, NumBackBoneFeaturizer, MultipleFeaturizer, NumAtoms
 
 # initialize the BackBoneFeaturizer class with required featurizers
@@ -56,33 +71,19 @@ featurizer = MultipleFeaturizer([num_backbones, backbone_length])
 polymer = Polymer.from_psmiles('*CCCCCCCCOc1ccc(C(c2ccc(O*)cc2)(C(F)(F)F)C(F)(F)F)cc1')
 result = featurizer.featurize(polymer)
 ```
-The result will be a NumPy array of num_backbones and backbone_length values for the given polymer.
+The result will be a NumPy array of `num_backbones` and `backbone_length` values for the given polymer.
 
 
-# Example for getting featurizers for the sidechain and backbone level of the polymer
-```python
-from polymetrix.featurizer import SideChainFeaturizer, BackBoneFeaturizer, NumHBondDonors, NumHBondAcceptors, Sp3CarbonCountFeaturizer, MultipleFeaturizer
+## Loading datasets 
 
-# initialize the SideChainFeaturizer and BackBoneFeaturizer class with required featurizers
-sidechain_num_hbond_donors = SideChainFeaturizer(NumHBondDonors())
-sidechain_num_hbond_acceptors = SideChainFeaturizer(NumHBondAcceptors())
-sidechain_sp3_carbon_count = SideChainFeaturizer(Sp3CarbonCountFeaturizer())
-backbone_num_hbond_donors = BackBoneFeaturizer(NumHBondDonors())
-backbone_num_hbond_acceptors = BackBoneFeaturizer(NumHBondAcceptors())
-backbone_sp3_carbon_count = BackBoneFeaturizer(Sp3CarbonCountFeaturizer())
+Additionally, you can load the curated dataset for glass transition temperature (Tg) data for the polymers using this package.
 
-featurizer = MultipleFeaturizer([sidechain_num_hbond_donors, sidechain_num_hbond_acceptors, sidechain_sp3_carbon_count, backbone_num_hbond_donors, backbone_num_hbond_acceptors, backbone_sp3_carbon_count])
-polymer = Polymer.from_psmiles('*CCCCCCCCOc1ccc(C(c2ccc(O*)cc2)(C(F)(F)F)C(F)(F)F)cc1')
-result = featurizer.featurize(polymer)
-```
-The result will be a NumPy array of sidechain_num_hbond_donors, sidechain_num_hbond_acceptors, sidechain_sp3_carbon_count, backbone_num_hbond_donors, backbone_num_hbond_acceptors, backbone_sp3_carbon_count values for the given polymer.
-
-# Additionally, you can load the curated dataset for glass transition temperature (Tg) data for the polymers using this package.
-```python
+``` python
 # Import necessary modules
 from polymetrix.datasets import CuratedGlassTempDataset
 
 # Load the dataset
 dataset = CuratedGlassTempDataset(version=version, url=url)
 ```
-The dataset will be a class object that contains the data for the curated dataset for glass transition temperature (Tg) data for the polymers along with chemical and topoligical featurizers for the polymers.
+
+The dataset will be a class object that contains the data for the curated dataset for glass transition temperature (Tg) data for the polymers along with chemical and topological featurizers for the polymers.
