@@ -40,6 +40,7 @@ nav:
   - Getting Started:
       - Installation: installation.md
   - How-To Guides: how_to_guides.md
+  - Datasets: datasets.md
   - API Reference:
       - API Overview: api.md
       - Dataset Class: dataset_class.md

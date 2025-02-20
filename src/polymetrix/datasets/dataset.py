@@ -20,6 +20,7 @@ class AbstractDataset(ABC):
     @abstractmethod
     def get_subset(self, indices: Collection[int]) -> "AbstractDataset":
         """Get a subset of the dataset.
+
         Args:
             indices (Collection[int]): Indices to include in the subset.
         Returns:
@@ -30,6 +31,7 @@ class AbstractDataset(ABC):
     @property
     def available_features(self) -> list[str]:
         """List of available feature names in the dataset.
+
         Returns:
             List[str]: List of feature names.
         """
@@ -38,6 +40,7 @@ class AbstractDataset(ABC):
     @property
     def available_labels(self) -> list[str]:
         """List of available label names in the dataset.
+
         Returns:
             List[str]: List of label names.
         """
@@ -46,6 +49,7 @@ class AbstractDataset(ABC):
     @property
     def meta_info(self) -> list[str]:
         """List of available metadata fields in the dataset.
+
         Returns:
             List[str]: List of metadata field names.
         """
@@ -63,10 +67,12 @@ class AbstractDataset(ABC):
         self, idx: Collection[int], feature_names: Optional[Collection[str]] = None
     ) -> np.ndarray:
         """Get features for specified indices.
+
         Args:
             idx (Collection[int]): Indices of entries.
             feature_names (Optional[Collection[str]]): Names of features to return.
             If None, returns all available features.
+
         Returns:
             np.ndarray: Array of feature values.
         """
@@ -79,10 +85,12 @@ class AbstractDataset(ABC):
         self, idx: Collection[int], label_names: Optional[Collection[str]] = None
     ) -> np.ndarray:
         """Get labels for specified indices.
+
         Args:
             idx (Collection[int]): Indices of entries.
             label_names (Optional[Collection[str]]): Names of labels to return.
             If None, returns all available labels.
+
         Returns:
             np.ndarray: Array of label values.
         """
@@ -95,10 +103,12 @@ class AbstractDataset(ABC):
         self, idx: Collection[int], meta_keys: Optional[Collection[str]] = None
     ) -> np.ndarray:
         """Get metadata for specified indices.
+
         Args:
             idx (Collection[int]): Indices of entries.
             meta_keys (Optional[Collection[str]]): Names of metadata fields to return.
             If None, returns all available metadata.
+            
         Returns:
             np.ndarray: Array of metadata values.
         """
