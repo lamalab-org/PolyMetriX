@@ -74,3 +74,4 @@ plugins:
             show_symbol_type_toc: true
             allow_inspection: true
             show_submodules: true
+            docstring_style: google
