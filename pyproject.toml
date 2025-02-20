@@ -106,7 +106,6 @@ select = [
 extend-ignore = [
   "PLR",   # Design related pylint codes
   "E501",  # Line too long
-  "PT004", # Use underscore for non-returning fixture (use usefixture instead)
   "B028",  # No explicit stacklevel
   "EM101", # Exception must not use a string literal
   "EM102", # Exception must not use an f-string literal
@@ -119,9 +118,4 @@ unfixable = [
 ]
 exclude = []
 extend-exclude = ["tests"]
-pydocstyle.convention = "numpy"
 isort.known-first-party = ["template"]
-
-[tool.docformatter]
-pre-summary-newline = true
-black = true
