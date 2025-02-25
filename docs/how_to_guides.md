@@ -42,7 +42,10 @@ result = featurizer.featurize(polymer)
 
 The result will be a NumPy array of `mol_weight_featurizer, hbond_donors, hbond_acceptors, rotatable_bonds` values for the given polymer.
 
+
 ### Featurizers for the sidechain level of the polymer
+The below image shows the difference between side chain and backbone of a polymer, Where the side chain is the part of the polymer that is not part of the main chain (highlighted in purple) and the backbone is the main chain of the polymer (highlighted in black).
+![Difference between side chain and backbone](figures/sidechain_backbone.png){width="50%" height="50%"}
 
 ``` python
 from polymetrix.featurizer import SideChainFeaturizer, NumSideChainFeaturizer, MultipleFeaturizer, NumAtoms

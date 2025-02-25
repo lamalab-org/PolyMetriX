@@ -1,4 +1,84 @@
+# site_name: PolyMetriX
+# site_url: https://lamalab-org.github.io/PolyMetriX/
+# site_description: Python package for polymer featurizers
+# repo_url: https://github.com/lamalab-org/PolyMetriX.git
+# repo_name: lamalab/polymetrix
+
+# theme:
+#   name: material
+#   palette:
+#     - media: "(prefers-color-scheme: light)"
+#       scheme: default
+#       primary: deep purple
+#       accent: deep purple
+#       toggle:
+#         icon: material/brightness-7
+#         name: Switch to dark mode
+#     - media: "(prefers-color-scheme: dark)"
+#       scheme: slate
+#       primary: deep purple
+#       accent: deep purple
+#       toggle:
+#         icon: material/brightness-4
+#         name: Switch to light mode
+#   features:
+#     - content.tabs.link
+#     - content.code.annotation
+#     - content.code.annotate
+#     - content.code.copy
+#     - content.code.copy_button
+#     - navigation.tabs
+#     - navigation.sections
+#     - navigation.top
+#     - toc.integrate
+#     - search.suggest
+#     - search.highlight
+#     - search.share
+#     - navigation.tabs.sticky
+
+# nav:
+#   - Home: index.md
+#   - Getting Started:
+#       - Installation: installation.md
+#   - How-To Guides: how_to_guides.md
+#   - Datasets: datasets.md
+#   - API Reference:
+#       - API Overview: api.md
+#       - Dataset Class: dataset_class.md
+#       - Featurizers: featurizers.md
+#       - Splitters: splitters.md
+
+# markdown_extensions:
+#   - admonition
+#   - pymdownx.details
+#   - pymdownx.superfences
+#   - pymdownx.highlight:
+#       anchor_linenums: true
+#   - pymdownx.inlinehilite
+#   - pymdownx.snippets
+#   - pymdownx.tabbed:
+#       alternate_style: true
+#   - tables
+#   - toc:
+#       permalink: true
+
+# plugins:
+#   - search
+#   - autorefs
+#   # - social
+#   - mkdocstrings:
+#       default_handler: python
+#       handlers:
+#         python:
+#           paths: [src]
+#           options:
+#             show_symbol_type_toc: true
+#             allow_inspection: true
+#             show_submodules: true
+#             docstring_style: google
+
 site_name: PolyMetriX
+site_url: https://lamalab-org.github.io/PolyMetriX/
 site_description: Python package for polymer featurizers
 repo_url: https://github.com/lamalab-org/PolyMetriX.git
 repo_name: lamalab/polymetrix
@@ -8,15 +88,15 @@ theme:
   palette:
     - media: "(prefers-color-scheme: light)"
       scheme: default
-      primary: teal
-      accent: teal
+      primary: deep purple
+      accent: deep purple
       toggle:
         icon: material/brightness-7
         name: Switch to dark mode
     - media: "(prefers-color-scheme: dark)"
       scheme: slate
-      primary: teal
-      accent: teal
+      primary: deep purple
+      accent: deep purple
       toggle:
         icon: material/brightness-4
         name: Switch to light mode
@@ -49,6 +129,7 @@ nav:
 
 markdown_extensions:
   - admonition
+  - attr_list  # Added this line
   - pymdownx.details
   - pymdownx.superfences
   - pymdownx.highlight:
