@@ -1,7 +1,6 @@
 <h1 align="center">
   PolyMetriX
 </h1>
-
 <p align="center">
     <a href="https://pypi.org/project/polymetrix">
         <img alt="PyPI" src="https://img.shields.io/pypi/v/polymetrix" />
