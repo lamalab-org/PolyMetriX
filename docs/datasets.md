@@ -1,7 +1,8 @@
-# Dataset Class
-## Glass Temperature Dataset for Polymers
+# Datasets
 
-```python
+## `CuratedGlassTempDataset`
+
+``` python
 from polymetrix.datasets import CuratedGlassTempDataset
 
 dataset = CuratedGlassTempDataset(version, url)
@@ -17,6 +18,7 @@ This will output the list of available features, labels, and metadata for the da
 Since, the dataset has been curated for the glass transition temperature (Tg) data for the polymers, the available labels are `labels.Exp_Tg(K)` and the available features are the list of features that are available in the dataset. In addition, this dataset also contains metadata information about the polymer, PSMILES, source, tg_range, number of points, reliability, and standard deviation of the data.
 
 The `meta.source` contain the following names of the sources from which the data has been obtained for Tg dataset along with links to the sources:
+
 - `Schrodinger` - [Schrodinger](https://pubs.acs.org/doi/10.1021/acsapm.0c00524)
 - `Mattioni` - [Mattioni](https://pubs.acs.org/doi/10.1021/ci010062o)
 - `Uchicago` - [Uchicago](https://pppdb.uchicago.edu/tg)
@@ -35,31 +37,4 @@ For the same polymer, different glass transition temperature values are reported
 The `meta.tg_range` column contains the range of the glass transition temperature for the polymer for multiple sources. 
 The `meta.number of points` column contains the number of data points for the polymer that has different Tg values from different sources.
 The `meta.stdev` column represents the standard deviation of the Tg values for the polymer.
-
-## Usage example for getting features and labels for the training/testing the model
-
-```python
-from polymetrix.datasets import CuratedGlassTempDataset
-
-dataset = CuratedGlassTempDataset(version, url)
-features = dataset.get_features(idx=len(dataset))
-target = dataset.get_labels(idx=len(dataset))
-```
-This will output the array of features and labels for the dataset, Which can be used for training/testing the model.
-
-
-## Usage example for using subset of the dataset
-
-```python
-from polymetrix.datasets import CuratedGlassTempDataset
-
-dataset = CuratedGlassTempDataset(version, url)
-features = dataset.get_features(idx=10)
-target = dataset.get_labels(idx=10)
-```
-This will output the array of features and labels for the first 10 data points in the dataset, Which can be used for training/testing the model.
-
-
-
-
 

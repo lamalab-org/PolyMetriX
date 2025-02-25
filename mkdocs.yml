@@ -21,16 +21,26 @@ theme:
         icon: material/brightness-4
         name: Switch to light mode
   features:
-    - navigation.instant
-    - navigation.tracking
-    - navigation.sections
-    - navigation.expand
-    - navigation.indexes
-    - toc.follow
+    - content.tabs.link
+    - content.code.annotation
+    - content.code.annotate
     - content.code.copy
+    - content.code.copy_button
+    - navigation.tabs
+    - navigation.sections
+    - navigation.top
+    - toc.integrate
+    - search.suggest
+    - search.highlight
+    - search.share
+    - navigation.tabs.sticky
 
 nav:
   - Home: index.md
+  - Getting Started:
+      - Installation: installation.md
+  - How-To Guides: how_to_guides.md
+  - Datasets: datasets.md
   - API Reference:
       - API Overview: api.md
       - Dataset Class: dataset_class.md
@@ -53,11 +63,15 @@ markdown_extensions:
 
 plugins:
   - search
+  - autorefs
+  # - social
   - mkdocstrings:
+      default_handler: python
       handlers:
         python:
           paths: [src]
           options:
+            show_symbol_type_toc: true
+            allow_inspection: true
+            show_submodules: true
             docstring_style: google
-            show_source: true
-            show_root_heading: true
