@@ -13,8 +13,8 @@
 
 <p align="center">
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="./docs/figures/overview.pdf">
-  <img alt="PolyMetriX Overview" src="./docs/figures/overview.pdf">
+  <source media="(prefers-color-scheme: dark)" srcset="./docs/figures/overview-dark.png">
+  <img alt="PolyMetriX Overview" src="./docs/figures/overview.png">
 </picture>
 </p>
 
@@ -30,3 +30,4 @@ For more detailed information, see the [documentation](https://lamalab-org.githu
 
 ```bash
 pip install polymetrix
+```
