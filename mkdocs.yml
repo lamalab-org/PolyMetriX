@@ -129,7 +129,7 @@ nav:
 
 markdown_extensions:
   - admonition
-  - attr_list  # Added this line
+  - attr_list
   - pymdownx.details
   - pymdownx.superfences
   - pymdownx.highlight:
