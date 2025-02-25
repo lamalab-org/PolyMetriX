@@ -12,6 +12,9 @@
     <a href='https://lamalab-org.github.io/PolyMetriX/'>
         <img src="https://img.shields.io/badge/docs-passing-brightgreen" alt="Documentation">
     </a>
+    <a href="https://www.contributor-covenant.org">
+        <img alt="Contributor Covenant" src="https://img.shields.io/badge/Contributor%20Covenant-2.1-4baaaa.svg" />
+    </a>
 </p>
 
 <p align="center">
@@ -58,3 +61,7 @@ polymer = Polymer.from_psmiles('*CCCCCCNC(=O)c1ccc(C(=O)N*)c(Sc2ccccc2)c1')
 result = featurizer.featurize(polymer) 
 ```
 For more detailed usage instructions, see the [documentation](https://lamalab-org.github.io/PolyMetriX/how_to_guides/).
+
+# How to contribute
+
+We welcome contributions to PolyMetriX! Please refer to the [contribution guidelines](https://lamalab-org.github.io/PolyMetriX/contributing/) for more information.
