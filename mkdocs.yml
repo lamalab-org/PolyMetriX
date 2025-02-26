@@ -42,6 +42,7 @@ nav:
       - Installation: installation.md
   - How-To Guides: how_to_guides.md
   - Datasets: datasets.md
+  - Contributing: contributing.md
   - API Reference:
       - API Overview: api.md
       - Dataset Class: dataset_class.md
