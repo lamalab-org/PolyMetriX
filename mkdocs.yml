@@ -41,6 +41,7 @@ nav:
   - Getting Started:
       - Installation: installation.md
   - How-To Guides: how_to_guides.md
+  - Polymer Graphs: polymer.md
   - Datasets: datasets.md
   - Contributing: contributing.md
   - API Reference:
