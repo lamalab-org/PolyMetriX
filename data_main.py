@@ -4,42 +4,48 @@ import fire
 import pandas as pd
 from pandarallel import pandarallel
 
-from polymetrix.featurizer import (
-    BalabanJIndex,
-    BackBoneFeaturizer,
-    BondCounts,
-    BridgingRingsCount,
-    FpDensityMorgan1,
-    FractionBicyclicRings,
-    FullPolymerFeaturizer,
-    HalogenCounts,
-    HeteroatomCount,
-    HeteroatomDensity,
-    MaxEStateIndex,
-    MaxRingSize,
-    MolecularWeightFeaturizer,
-    MultipleFeaturizer,
-    NumAliphaticHeterocycles,
+from polymetrix.featurizers.polymer import Polymer 
+
+from polymetrix.featurizers.chemical_featurizer import (
+    NumHBondDonors,
+    NumHBondAcceptors,
+    NumRotatableBonds,
+    NumRings,
+    NumNonAromaticRings,
     NumAromaticRings,
     NumAtoms,
-    NumBackBoneFeaturizer,
-    NumHBondAcceptors,
-    NumHBondDonors,
-    NumNonAromaticRings,
-    NumRings,
-    NumRotatableBonds,
-    NumSideChainFeaturizer,
-    SMR_VSA5,
-    SideChainFeaturizer,
-    SidechainDiversityFeaturizer,
-    SidechainLengthToStarAttachmentDistanceRatioFeaturizer,
-    SlogPVSA1,
-    Sp2CarbonCountFeaturizer,
-    Sp3CarbonCountFeaturizer,
-    StarToSidechainMinDistanceFeaturizer,
     TopologicalSurfaceArea,
+    FractionBicyclicRings,
+    NumAliphaticHeterocycles,
+    SlogPVSA1,
+    BalabanJIndex,
+    MolecularWeightFeaturizer,
+    Sp3CarbonCountFeaturizer,
+    Sp2CarbonCountFeaturizer,
+    MaxEStateIndex,
+    SMR_VSA5,
+    FpDensityMorgan1,
+    HalogenCounts,
+    BondCounts,
+    BridgingRingsCount,
+    MaxRingSize,
+    HeteroatomCount,
+    HeteroatomDensity,
 )
-from polymetrix.polymer import Polymer
+
+from polymetrix.featurizers.sidechain_backbone_featurizer import (
+    SideChainFeaturizer,
+    NumSideChainFeaturizer,
+    BackBoneFeaturizer,
+    NumBackBoneFeaturizer,
+    FullPolymerFeaturizer,
+    SidechainLengthToStarAttachmentDistanceRatioFeaturizer,
+    StarToSidechainMinDistanceFeaturizer,
+    SidechainDiversityFeaturizer,
+)
+
+from polymetrix.featurizers.multiple_featurizer import MultipleFeaturizer
+
 
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
