@@ -3,7 +3,10 @@ import numpy as np
 import networkx as nx
 import logging
 from rdkit import Chem
-from polymetrix.featurizers.base_featurizer import BaseFeatureCalculator, PolymerPartFeaturizer
+from polymetrix.featurizers.base_featurizer import (
+    BaseFeatureCalculator,
+    PolymerPartFeaturizer,
+)
 
 
 class SideChainFeaturizer(PolymerPartFeaturizer):
@@ -53,6 +56,21 @@ class FullPolymerFeaturizer(PolymerPartFeaturizer):
 class SidechainLengthToStarAttachmentDistanceRatioFeaturizer(BaseFeatureCalculator):
     """Computes aggregated ratios of sidechain lengths to the shortest backbone distance from the polymer's star node (*) to each sidechain's attachment point."""
 
+    def _compute_min_backbone_length(self, sidechain, star_nodes, star_paths, graph):
+        """Calculate the minimum backbone distance from any star node to the sidechain's attachment point."""
+        min_backbone_length = float("inf")
+        side_nodes = set(sidechain.nodes())
+        for node in side_nodes:
+            neighbors = set(graph.neighbors(node))
+            backbone_neighbors = neighbors - side_nodes
+            if backbone_neighbors:
+                attachment_point = next(iter(backbone_neighbors))
+                for star in star_nodes:
+                    if attachment_point in star_paths[star]:
+                        path_length = star_paths[star][attachment_point] + 1
+                        min_backbone_length = min(min_backbone_length, path_length)
+        return min_backbone_length
+
     def featurize(self, polymer) -> np.ndarray:
         graph = polymer.graph
         star_nodes = [
@@ -64,24 +82,15 @@ class SidechainLengthToStarAttachmentDistanceRatioFeaturizer(BaseFeatureCalculat
             return np.zeros(len(self.agg))
 
         sidechain_lengths = [len(sc.nodes()) for sc in sidechain_graphs]
+        star_paths = {
+            star: nx.single_source_shortest_path_length(graph, star)
+            for star in star_nodes
+        }
 
-        backbone_lengths = []
-        star_paths = {}
-        for star in star_nodes:
-            star_paths[star] = nx.single_source_shortest_path_length(graph, star)
-
-        for sidechain in sidechain_graphs:
-            min_backbone_length = float("inf")
-            side_nodes = set(sidechain.nodes())
-            for node in side_nodes:
-                neighbors = set(graph.neighbors(node))
-                if backbone_neighbors := neighbors - side_nodes:
-                    attachment_point = list(backbone_neighbors)[0]
-                    for star in star_nodes:
-                        if attachment_point in star_paths[star]:
-                            path_length = star_paths[star][attachment_point] + 1
-                            min_backbone_length = min(min_backbone_length, path_length)
-            backbone_lengths.append(min_backbone_length)
+        backbone_lengths = [
+            self._compute_min_backbone_length(sidechain, star_nodes, star_paths, graph)
+            for sidechain in sidechain_graphs
+        ]
 
         ratios = [
             s_length / b_length
