@@ -43,6 +43,11 @@ from polymetrix.polymer import Polymer
 
 
 def create_featurizer():
+    """Creates and configures a MultipleFeaturizer with various polymer feature extractors.
+
+    Returns:
+        MultipleFeaturizer: A configured featurizer combining multiple polymer feature extractors.
+    """
     sidechain_length = SideChainFeaturizer(NumAtoms(agg=["sum", "mean", "max", "min"]))
     num_sidechains = NumSideChainFeaturizer()
     backbone_length = BackBoneFeaturizer(NumAtoms())
@@ -212,6 +217,15 @@ def create_featurizer():
 
 
 def calculate_features(psmiles, featurizer):
+    """Calculates features for a given polymer SMILES string using the specified featurizer.
+
+    Args:
+        psmiles (str): Polymer SMILES string to process.
+        featurizer (MultipleFeaturizer): Configured featurizer to extract features.
+
+    Returns:
+        pd.Series: Series containing calculated features or None values if processing fails.
+    """
     try:
         polymer_instance = Polymer.from_psmiles(psmiles)
         features = featurizer.featurize(polymer_instance)
@@ -222,6 +236,13 @@ def calculate_features(psmiles, featurizer):
 
 
 def process_csv(input_file, output_file, psmiles_column):
+    """Processes a CSV file containing polymer SMILES and calculates their features.
+
+    Args:
+        input_file (str): Path to input CSV file.
+        output_file (str): Path where output CSV file will be saved.
+        psmiles_column (str): Name of the column containing PSMILES strings.
+    """
     pandarallel.initialize(progress_bar=True)
 
     df = pd.read_csv(input_file)
@@ -241,6 +262,14 @@ def process_csv(input_file, output_file, psmiles_column):
 
 
 def main(input_path, output_path, PSMILES_COLUMN="PSMILES"):
+    """Main function to process polymer features from an input CSV file.
+
+    Args:
+        input_path (str): Path to input CSV file.
+        output_path (str): Path where output CSV file will be saved.
+        PSMILES_COLUMN (str, optional): Name of column containing PSMILES strings.
+            Defaults to "PSMILES".
+    """
     if not os.path.exists(input_path):
         print(f"Input file not found: {input_path}")
         print("Current working directory:", os.getcwd())
