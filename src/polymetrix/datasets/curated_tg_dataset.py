@@ -8,15 +8,20 @@ from polymetrix.datasets import AbstractDataset
 class CuratedGlassTempDataset(AbstractDataset):
     """Dataset for polymer glass transition temperature (Tg) data."""
 
+    ALL_FEATURE_LEVELS = [
+        "sidechainlevel",
+        "backbonelevel",
+        "fullpolymerlevel",
+    ]
+    FEATURE_PREFIX = "features."
+    LABEL_PREFIX = "labels."
+    META_PREFIX = "meta."
+
     def __init__(
         self,
         version: str,
         url: str,
-        feature_levels: List[str] = [
-            "sidechainlevel",
-            "backbonelevel",
-            "fullpolymerlevel",
-        ],
+        feature_levels: List[str] = ALL_FEATURE_LEVELS,
         subset: Optional[Collection[int]] = None,
     ):
         """Initialize the Tg dataset."""
@@ -24,17 +29,12 @@ class CuratedGlassTempDataset(AbstractDataset):
         self._version = version
         self._url = url
         self._feature_levels = feature_levels
-        self._all_feature_levels = [
-            "sidechainlevel",
-            "backbonelevel",
-            "fullpolymerlevel",
-        ]
 
-        # Validate feature levels
-        valid_levels = set(self._all_feature_levels)
-        if not all(level in valid_levels for level in self._feature_levels):
+        # Validate feature levels using set operations
+        if not set(self._feature_levels).issubset(self.ALL_FEATURE_LEVELS):
             raise ValueError(
-                f"feature_levels must be a subset of {valid_levels}, got {self._feature_levels}"
+                f"feature_levels must be a subset of {self.ALL_FEATURE_LEVELS}, "
+                f"got {self._feature_levels}"
             )
 
         self._load_data(subset)
@@ -53,25 +53,29 @@ class CuratedGlassTempDataset(AbstractDataset):
             self._df = self._df.iloc[subset].reset_index(drop=True)
 
         self._psmiles = self._df["PSMILES"].to_numpy()
-        self._feature_names = [
-            col
-            for col in self._df.columns
-            if any(
-                col.startswith(f"{level}.features.") for level in self._feature_levels
-            )
+
+        allowed_prefixes = [
+            f"{level}.{self.FEATURE_PREFIX}" for level in self._feature_levels
         ]
-        self._label_names = [
-            col for col in self._df.columns if col.startswith("labels.")
-        ]
-        self._meta_names = [col for col in self._df.columns if col.startswith("meta.")]
+        self._feature_names = self._filter_columns(allowed_prefixes)
+
+        self._label_names = self._filter_columns([self.LABEL_PREFIX])
+        self._meta_names = self._filter_columns([self.META_PREFIX])
 
         self._features = self._df[self._feature_names].to_numpy()
         self._labels = self._df[self._label_names].to_numpy()
         self._meta_data = self._df[self._meta_names].to_numpy()
 
+    def _filter_columns(self, prefixes: List[str]) -> List[str]:
+        """Helper to filter columns by prefix(es)."""
+        return [
+            col
+            for col in self._df.columns
+            if any(col.startswith(prefix) for prefix in prefixes)
+        ]
+
     @property
     def df(self) -> pd.DataFrame:
-        """Return the underlying DataFrame."""
         return self._df
 
     @property
