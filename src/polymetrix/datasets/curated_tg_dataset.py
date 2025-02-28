@@ -24,7 +24,13 @@ class CuratedGlassTempDataset(AbstractDataset):
         feature_levels: List[str] = ALL_FEATURE_LEVELS,
         subset: Optional[Collection[int]] = None,
     ):
-        """Initialize the Tg dataset."""
+        """Initialize the Tg dataset.
+         Args:
+            version (str): Version of the dataset
+            url (str): URL to the dataset
+            feature_levels (List[str]): Feature levels to include
+            subset (Optional[Collection[int]]): Indices to include in the dataset
+         """
         super().__init__()
         self._version = version
         self._url = url
