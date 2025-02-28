@@ -1,11 +1,11 @@
 import os
 import logging
+from typing import List, Optional
 import fire
 import pandas as pd
 from pandarallel import pandarallel
 
-from polymetrix.featurizers.polymer import Polymer 
-
+from polymetrix.featurizers.polymer import Polymer
 from polymetrix.featurizers.chemical_featurizer import (
     NumHBondDonors,
     NumHBondAcceptors,
@@ -32,7 +32,6 @@ from polymetrix.featurizers.chemical_featurizer import (
     HeteroatomCount,
     HeteroatomDensity,
 )
-
 from polymetrix.featurizers.sidechain_backbone_featurizer import (
     SideChainFeaturizer,
     NumSideChainFeaturizer,
@@ -43,9 +42,7 @@ from polymetrix.featurizers.sidechain_backbone_featurizer import (
     StarToSidechainMinDistanceFeaturizer,
     SidechainDiversityFeaturizer,
 )
-
 from polymetrix.featurizers.multiple_featurizer import MultipleFeaturizer
-
 
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
@@ -147,66 +144,132 @@ SIDECHAIN_LEVEL_FEATURIZERS = [
 ]
 
 
-def instantiate_featurizers(features):
-    """Instantiates a list of featurizers from full, backbone, or sidechain level configurations."""
+DEFAULT_META_COLUMNS = [
+    "polymer",
+    "source",
+    "tg_range",
+    "tg_values",
+    "num_of_points",
+    "std",
+    "reliability",
+]
+
+DEFAULT_LABEL_COLUMNS = ["Exp_Tg(K)"]
+
+
+def create_featurizer_set(featurizer_config: list) -> List[object]:
+    """Instantiate featurizers from configuration tuples."""
     featurizers = []
-    for featurizer_class, feature_class, args in features:
-        if feature_class is None:
-            # Standalone featurizer (e.g., NumSideChainFeaturizer)
-            featurizers.append(featurizer_class(**args))
+    for container_cls, feature_cls, params in featurizer_config:
+        if feature_cls is None:
+            featurizers.append(container_cls(**params))
         else:
-            # Wrapped featurizer (e.g., SideChainFeaturizer(NumAtoms(...)))
-            featurizers.append(featurizer_class(feature_class(**args)))
+            inner_feat = feature_cls(**params)
+            featurizers.append(container_cls(inner_feat))
     return featurizers
 
 
-def create_featurizer():
-    """Creates and configures a MultipleFeaturizer with various polymer feature extractors."""
-    full_poly_extractors = instantiate_featurizers(FULL_POLYMER_FEATURIZERS)
-    backbone_extractors = instantiate_featurizers(BACKBONE_LEVEL_FEATURIZERS)
-    sidechain_extractors = instantiate_featurizers(SIDECHAIN_LEVEL_FEATURIZERS)
+def get_featurizer() -> tuple:
+    """Create and configure the MultipleFeaturizer with prefixed feature labels."""
+    full_poly = create_featurizer_set(FULL_POLYMER_FEATURIZERS)
+    backbone = create_featurizer_set(BACKBONE_LEVEL_FEATURIZERS)
+    sidechain = create_featurizer_set(SIDECHAIN_LEVEL_FEATURIZERS)
 
-    # Combine all featurizers into a single MultipleFeaturizer
-    all_extractors = sidechain_extractors + backbone_extractors + full_poly_extractors
-    return MultipleFeaturizer(all_extractors)
+    def prefix_labels(featurizers: list, prefix: str) -> List[str]:
+        return [
+            f"{prefix}.{label}" for f in featurizers for label in f.feature_labels()
+        ]
+
+    features = (
+        sidechain + backbone + full_poly,
+        prefix_labels(sidechain, "sidechainlevel.features")
+        + prefix_labels(backbone, "backbonelevel.features")
+        + prefix_labels(full_poly, "fullpolymerlevel.features"),
+    )
+
+    return MultipleFeaturizer(features[0]), features[1]
 
 
-def calculate_features(psmiles, featurizer):
-    """Calculates features for a given polymer SMILES string using the specified featurizer."""
+def compute_features(psmiles: str, featurizer: MultipleFeaturizer) -> pd.Series:
+    """Compute features for a single polymer SMILES string."""
     try:
-        polymer_instance = Polymer.from_psmiles(psmiles)
-        features = featurizer.featurize(polymer_instance)
-        return pd.Series(features)
+        polymer = Polymer.from_psmiles(psmiles)
+        return pd.Series(featurizer.featurize(polymer))
     except Exception as e:
-        logger.error(f"Error processing PSMILES {psmiles}: {str(e)}")
+        logger.error(f"Error processing {psmiles}: {str(e)}")
         return pd.Series([None] * len(featurizer.feature_labels()))
 
 
-def process_csv(input_file, output_file, psmiles_column):
-    """Processes a CSV file containing polymer SMILES and calculates their features."""
+def process_dataframe(
+    df: pd.DataFrame,
+    psmiles_column: str,
+    meta_columns: List[str],
+    label_columns: List[str],
+    output_path: str,
+) -> None:
+    """Process DataFrame and save results."""
+    featurizer, feature_labels = get_featurizer()
+
     pandarallel.initialize(progress_bar=True)
-    df = pd.read_csv(input_file)
-    featurizer = create_featurizer()
 
-    feature_df = df[psmiles_column].parallel_apply(
-        lambda x: calculate_features(x, featurizer)
+    features_df = df[psmiles_column].parallel_apply(
+        lambda x: compute_features(x, featurizer)
     )
-    feature_df.columns = featurizer.feature_labels()
-    result_df = pd.concat([df, feature_df], axis=1)
+    features_df.columns = feature_labels
 
-    result_df.to_csv(output_file, index=False)
-    logger.info(f"Results saved to {output_file}")
+    column_renames = {}
+
+    # Handle label columns
+    for col in label_columns:
+        if col in df.columns:
+            column_renames[col] = f"labels.{col}"
+
+    # Handle meta columns
+    for col in meta_columns:
+        if col in df.columns:
+            column_renames[col] = f"meta.{col}"
+
+    # Combine and rename columns
+    result_df = pd.concat([df.rename(columns=column_renames), features_df], axis=1)
+    result_df.to_csv(output_path, index=False)
+    logger.info(f"Saved processed data to {output_path}")
 
 
-def main(input_path, output_path, PSMILES_COLUMN="PSMILES"):
-    """Main function to process polymer features from an input CSV file."""
+def main(
+    input_path: str,
+    output_path: str,
+    psmiles_column: str = "PSMILES",
+    meta_columns: Optional[List[str]] = None,
+    label_columns: Optional[List[str]] = None,
+) -> None:
+    """Main processing pipeline."""
     if not os.path.exists(input_path):
         logger.error(f"Input file not found: {input_path}")
-        logger.info(f"Current working directory: {os.getcwd()}")
-        logger.info("Please ensure the input file exists and the path is correct.")
         return
 
-    process_csv(input_path, output_path, PSMILES_COLUMN)
+    meta_cols = meta_columns or DEFAULT_META_COLUMNS
+    label_cols = label_columns or DEFAULT_LABEL_COLUMNS
+
+    df = pd.read_csv(input_path)
+
+    missing_columns = {
+        "PSMILES": [psmiles_column],
+        "meta": meta_cols,
+        "label": label_cols,
+    }
+
+    for col_type, columns in missing_columns.items():
+        missing = [col for col in columns if col not in df.columns]
+        if missing:
+            logger.warning(f"Missing {col_type} columns: {missing}")
+
+    process_dataframe(
+        df=df,
+        psmiles_column=psmiles_column,
+        meta_columns=meta_cols,
+        label_columns=label_cols,
+        output_path=output_path,
+    )
 
 
 if __name__ == "__main__":
