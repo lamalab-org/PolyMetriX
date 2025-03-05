@@ -41,7 +41,6 @@ The psmiles is parsed into an `RDKit` molecule and converted to a `NetworkX` gra
 
 Step 2: Identify Connection Points
 ```python
-from polymetrix.featurizers.polymer import get_connection_points
 connection_points = polymer.get_connection_points()
 print("Connection Points:", connection_points)
 ```
