@@ -22,11 +22,11 @@ Below is a detailed table of the featurizers available in PolyMetriX:
 | **NumAliphaticHeterocycles**         | Counts non-aromatic heterocycles with heteroatoms (e.g., N, O, S).                           | Chemical    |
 | **SlogPVSA1**                        | Surface area contributing to octanol solubility, linked to lipophilicity.                    | Chemical    |
 | **BalabanJIndex**                    | Measures molecular complexity and connectivity of atoms.                                     | Chemical    |
-| **MolecularWeightFeaturizer**        | Calculates molecular weight, influencing solubility and other properties.                    | Chemical    |
+| **MolecularWeight**        | Calculates molecular weight, influencing solubility and other properties.                    | Chemical    |
 | **Sp3CarbonCountFeaturizer**         | Counts sp3 carbons, providing info on 3D structure and solubility.                           | Chemical    |
 | **Sp2CarbonCountFeaturizer**         | Counts sp2 carbons, indicating aromaticity and reactivity.                                   | Chemical    |
 | **MaxEStateIndex**                   | Maximum electronic state index, reflecting charge distribution.                              | Chemical    |
-| **SMR_VSA5**                         | Molar refractivity sum for atoms with specific surface area (2.45–2.75).                     | Chemical    |
+| **SmrVSA5**                         | Molar refractivity sum for atoms with specific surface area (2.45–2.75).                     | Chemical    |
 | **FpDensityMorgan1**                 | Density of substructure info in Morgan fingerprint.                                          | Chemical    |
 | **HalogenCounts**                    | Counts halogen atoms (F, Cl, Br, I) in the molecule.                                         | Chemical    |
 | **BondCounts**                       | Counts total bonds, indicating structural complexity and reactivity.                         | Chemical    |

@@ -43,6 +43,9 @@ nav:
   - How-To Guides: how_to_guides.md
   - Polymer Graphs: polymer.md
   - Datasets: datasets.md
+  - Examples:
+      - Using featurizers: featurizers.ipynb
+      - How to train a model: train_test_splitters.ipynb
   - Contributing: contributing.md
   - API Reference:
       - API Overview: api.md
@@ -69,6 +72,7 @@ plugins:
   - search
   - autorefs
   # - social
+  - mkdocs-jupyter
   - mkdocstrings:
       default_handler: python
       handlers:
