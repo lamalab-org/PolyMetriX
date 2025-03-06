@@ -61,12 +61,6 @@ result = featurizer.featurize(polymer)
 ```
 For more detailed usage instructions, see the [documentation](https://lamalab-org.github.io/PolyMetriX/how_to_guides/).
 
-## Getting Featurizers on Full Polymer, Side chain, and Backbone
-When you have `PSMILES` of the polymer in a CSV file, you can run the following script to get the combined features of the full polymer, side chain, and backbone.
-
-```python
-python data_main.py --input_file <path_to_input_file> --output_file <path_to_output_file> --psmiles_column <column_name>
-```
 
 # How to contribute
 
