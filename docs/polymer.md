@@ -18,7 +18,7 @@ The process of classifying nodes into backbone and side chain components is hand
 
 3. **Cycles Detection**: Cycles (closed loops) in the graph that include nodes from these shortest paths are identified. In polymers, cycles can represent repeating units or cyclic structures within the backbone. Nodes in these cycles are added to the backbone.
 
-4. **Degree-1 Nodes**: Nodes with a degree of 1 (connected to only one other node) that are attached to the backbone are also included in the backbone. These are typically terminal groups or atoms at the ends of the chain.
+4. **Degree-1 Nodes**: Nodes with a degree of 1 (connected to only one other node) that are attached to the backbone are also included in the backbone. These are typically terminal groups.
 
 5. **Connected Components**: The remaining nodes in the graph that are not part of the backbone are considered side chain atoms. These atoms are connected to the backbone but are not part of the main chain.
 
