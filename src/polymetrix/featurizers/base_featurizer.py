@@ -11,7 +11,9 @@ class BaseFeatureCalculator:
         "sum": np.sum,
     }
 
-    def __init__(self, agg: List[str] = ["sum"]):
+    def __init__(self, agg: List[str] = None):
+        if agg is None:
+            agg = ["sum"]
         self.agg = agg
 
     def _sanitize(self, mol: Chem.Mol, sanitize: bool) -> None:
