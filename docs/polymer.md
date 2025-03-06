@@ -16,7 +16,7 @@ The process of classifying nodes into backbone and side chain components is hand
 
 2. **Shortest Paths Between Connection Points**: The algorithm identifies all shortest paths between pairs of asterisk (*) nodes. These paths often correspond to the main chain or repeating units of the polymer, forming the initial backbone.
 
-3. **Cycles Detection**: Cycles (closed loops) in the graph that include nodes from these shortest paths are identified. In polymers, cycles can represent repeating units or cyclic structures within the backbone. Nodes in these cycles are added to the backbone.
+3. **Cycles Detection**: Cycles (closed loops) in the graph that include nodes from these shortest paths are identified. In polymers, cycles can represent cyclic structures (e.g.,(aromatic) rings) within the backbone. Nodes in these cycles are added to the backbone.
 
 4. **Degree-1 Nodes**: Nodes with a degree of 1 (connected to only one other node) that are attached to the backbone are also included in the backbone. These are typically terminal groups.
 
