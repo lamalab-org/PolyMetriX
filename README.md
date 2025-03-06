@@ -51,13 +51,15 @@ dataset = CuratedGlassTempDataset()
 ## Getting Features for Polymers
 
 ```python
-from polymetrix.featurizer import FullPolymerFeaturizer, MolecularWeightFeaturizer, 
+from polymetrix.featurizers.polymer import Polymer
+from polymetrix.featurizers.chemical_featurizer import MolecularWeight
+from polymetrix.featurizers.sidechain_backbone_featurizer import FullPolymerFeaturizer
 
 # initialize the FullPolymerFeaturizer class with required featurizers
-featurizer = FullPolymerFeaturizer(MolecularWeightFeaturizer()) 
+featurizer = FullPolymerFeaturizer(MolecularWeight())
 
-polymer = Polymer.from_psmiles('*CCCCCCNC(=O)c1ccc(C(=O)N*)c(Sc2ccccc2)c1') 
-result = featurizer.featurize(polymer) 
+polymer = Polymer.from_psmiles('*CCCCCCNC(=O)c1ccc(C(=O)N*)c(Sc2ccccc2)c1')
+result = featurizer.featurize(polymer)
 ```
 For more detailed usage instructions, see the [documentation](https://lamalab-org.github.io/PolyMetriX/how_to_guides/).
 
