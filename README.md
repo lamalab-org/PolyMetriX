@@ -1,43 +1,67 @@
-# PolyMetriX
+<h1 align="center">
+  PolyMetriX
+</h1>
+<p align="center">
+    <a href="https://pypi.org/project/polymetrix">
+        <img alt="PyPI" src="https://img.shields.io/pypi/v/polymetrix" />
+    </a>
+    <a href="./LICENSE">
+        <img alt="PyPI - License" src="https://img.shields.io/pypi/l/polymetrix" />
+    </a>
+    <a href='https://lamalab-org.github.io/PolyMetriX/'>
+        <img src="https://img.shields.io/badge/docs-passing-brightgreen" alt="Documentation">
+    </a>
+    <a href="https://www.contributor-covenant.org">
+        <img alt="Contributor Covenant" src="https://img.shields.io/badge/Contributor%20Covenant-2.1-4baaaa.svg" />
+    </a>
+</p>
 
-PolyMetriX is a Python-based tool designed to calculate various molecular descriptors for polymers generated from PSMILES strings.
-## Descriptors Calculated
+<p align="center">
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="./docs/figures/overview-dark.png">
+  <img alt="PolyMetriX Overview" src="./docs/figures/overview.png">
+</picture>
+</p>
 
-The following descriptors are calculated:
+*PolyMetriX* is a comprehensive Python library that powers the entire machine learning workflow for polymer informatics. From data preparation to feature engineering, it provides a unified framework for developing structure-property relationships in polymer science.
 
-- **nconf20_2**: Number of conformers within 20 kcal/mol of the lowest energy conformer
-- **rotatable_bonds**: Number of rotatable bonds in the molecule
-- **num_rings**: Total number of rings in the molecule
-- **num_aromatic_rings**: Number of aromatic rings in the molecule
-- **num_non_aromatic_rings**: Number of non-aromatic rings in the molecule
-- **hbond_acceptors**: Number of hydrogen bond acceptors
-- **hbond_donors**: Number of hydrogen bond donors
-- **n_sc**: Number of side chains
-- **len_sc**: Lengths of the side chains
-- **n_bb**: Number of backbones
-- **len_bb**: Lengths of the backbones
+For more detailed information, see the [documentation](https://lamalab-org.github.io/polymetrix/).
 
+## ✨ Installing PolyMetriX
 
-## Local Installation
+**Prerequisites**
 
-We recommend that you create a virtual conda environment on your computer in which you install the dependencies for this package. To do so head over to [Miniconda](https://docs.conda.io/en/latest/miniconda.html) and follow the installation instructions there.
-
-
-<!-- ### Install latest release
+- **Python 3.10 or newer:**
 
 ```bash
-pip install mattext
-``` -->
+pip install polymetrix
+```
+For more detailed installation instructions, see the [documentation](https://lamalab-org.github.io/PolyMetriX/installation/).
 
-### Install development version
+## Loading Curated Glass Transition Temperature Dataset
 
-Clone this repository (you need `git` for this, if you get a `missing command` error for `git` you can install it with `sudo apt-get install git`)
+```python
+# Import necessary modules
+from polymetrix.datasets import CuratedGlassTempDataset
 
-```bash
-git clone https://github.com/lamalab-org/PolyMetriX.git
-cd polymetrix
+# Load the dataset
+dataset = CuratedGlassTempDataset(version=version, url=url)
 ```
 
-```bash
-pip install -e .
+## Getting Features for Polymers
+
+```python
+from polymetrix.featurizer import FullPolymerFeaturizer, MolecularWeightFeaturizer, 
+
+# initialize the FullPolymerFeaturizer class with required featurizers
+featurizer = FullPolymerFeaturizer(MolecularWeightFeaturizer()) 
+
+polymer = Polymer.from_psmiles('*CCCCCCNC(=O)c1ccc(C(=O)N*)c(Sc2ccccc2)c1') 
+result = featurizer.featurize(polymer) 
 ```
+For more detailed usage instructions, see the [documentation](https://lamalab-org.github.io/PolyMetriX/how_to_guides/).
+
+
+# How to contribute
+
+We welcome contributions to PolyMetriX! Please refer to the [contribution guidelines](https://lamalab-org.github.io/PolyMetriX/contributing/) for more information.

@@ -1,4 +1,5 @@
 site_name: PolyMetriX
+site_url: https://lamalab-org.github.io/PolyMetriX/
 site_description: Python package for polymer featurizers
 repo_url: https://github.com/lamalab-org/PolyMetriX.git
 repo_name: lamalab/polymetrix
@@ -8,15 +9,15 @@ theme:
   palette:
     - media: "(prefers-color-scheme: light)"
       scheme: default
-      primary: teal
-      accent: teal
+      primary: deep purple
+      accent: deep purple
       toggle:
         icon: material/brightness-7
         name: Switch to dark mode
     - media: "(prefers-color-scheme: dark)"
       scheme: slate
-      primary: teal
-      accent: teal
+      primary: deep purple
+      accent: deep purple
       toggle:
         icon: material/brightness-4
         name: Switch to light mode
@@ -40,7 +41,9 @@ nav:
   - Getting Started:
       - Installation: installation.md
   - How-To Guides: how_to_guides.md
+  - Polymer Graphs: polymer.md
   - Datasets: datasets.md
+  - Contributing: contributing.md
   - API Reference:
       - API Overview: api.md
       - Dataset Class: dataset_class.md
@@ -49,6 +52,7 @@ nav:
 
 markdown_extensions:
   - admonition
+  - attr_list
   - pymdownx.details
   - pymdownx.superfences
   - pymdownx.highlight:
