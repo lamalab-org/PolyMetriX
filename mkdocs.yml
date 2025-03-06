@@ -43,15 +43,15 @@ nav:
   - How-To Guides: how_to_guides.md
   - Polymer Graphs: polymer.md
   - Datasets: datasets.md
-  - Examples:
+  - Using featurization: featurizers.ipynb
+  - Examples: 
       - Using featurizers: featurizers.ipynb
-      - How to train a model: train_test_splitters.ipynb
-  - Contributing: contributing.md
+      - Training model: train_test_splitters.ipynb
   - API Reference:
       - API Overview: api.md
-      - Dataset Class: dataset_class.md
       - Featurizers: featurizers.md
       - Splitters: splitters.md
+      - contributing: contributing.md
 
 markdown_extensions:
   - admonition
@@ -72,7 +72,8 @@ plugins:
   - search
   - autorefs
   # - social
-  - mkdocs-jupyter
+  - mkdocs-jupyter: 
+        execute: true
   - mkdocstrings:
       default_handler: python
       handlers:
