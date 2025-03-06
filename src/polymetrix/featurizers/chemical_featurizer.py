@@ -161,6 +161,23 @@ class NumNonAromaticRings(BaseFeatureCalculator):
         return ["num_non_aromatic_rings"]
 
 
+class NumAliphaticHeterocycles(BaseFeatureCalculator):
+    """
+    Counts the number of aliphatic heterocycles in the molecule.
+    """
+
+    def calculate(self, mol: Chem.Mol, sanitize: bool = True) -> np.ndarray:
+        self._sanitize(mol, sanitize)
+        num_heterocycles = 0
+        for ring in mol.GetRingInfo().AtomRings():
+            if any(mol.GetAtomWithIdx(atom).GetAtomicNum() != 6 for atom in ring):
+                num_heterocycles += 1
+        return np.array([num_heterocycles])
+
+    def feature_base_labels(self) -> List[str]:
+        return ["num_aliphatic_heterocycles"]
+
+
 class NumAromaticRings(BaseFeatureCalculator):
     """
     Counts the number of aromatic rings in the molecule.
@@ -270,3 +287,73 @@ class MaxRingSize(BaseFeatureCalculator):
 
     def feature_base_labels(self) -> List[str]:
         return ["max_ring_size"]
+
+    
+class Sp3CarbonCountFeaturizer(BaseFeatureCalculator):
+    """
+    Counts the number of sp3 hybridized carbon atoms in the molecule.
+    """
+    def calculate(self, mol: Chem.Mol, sanitize: bool = True) -> np.ndarray:
+        self._sanitize(mol, sanitize)
+        sp3_count = sum(
+            1
+            for atom in mol.GetAtoms()
+            if atom.GetHybridization() == Chem.HybridizationType.SP3
+        )
+        return np.array([sp3_count])
+
+    def feature_base_labels(self) -> List[str]:
+        return ["sp3_carbon_count"]
+
+
+class Sp2CarbonCountFeaturizer(BaseFeatureCalculator):
+    """
+    Counts the number of sp2 hybridized carbon atoms in the molecule.
+    """
+    def calculate(self, mol: Chem.Mol, sanitize: bool = True) -> np.ndarray:
+        self._sanitize(mol, sanitize)
+        sp2_count = sum(
+            1
+            for atom in mol.GetAtoms()
+            if atom.GetHybridization() == Chem.HybridizationType.SP2
+        )
+        return np.array([sp2_count])
+
+    def feature_base_labels(self) -> List[str]:
+        return ["sp2_carbon_count"]
+
+
+class HalogenCounts(BaseFeatureCalculator):
+    """
+    Counts the number of halogen atoms in the molecule.
+    """
+    def calculate(self, mol: Chem.Mol, sanitize: bool = True) -> np.ndarray:
+        self._sanitize(mol, sanitize)
+        halogen_count = sum(
+            1 for atom in mol.GetAtoms() if atom.GetAtomicNum() in [9, 17, 35, 53]
+        )
+        return np.array([halogen_count])
+
+    def feature_base_labels(self) -> List[str]:
+        return ["halogen_count"]
+    
+class BridgingRingsCount(BaseFeatureCalculator):
+    """
+    Counts the number of bridging rings in the molecule.
+    """
+    def calculate(self, mol: Chem.Mol, sanitize: bool = True) -> np.ndarray:
+        self._sanitize(mol, sanitize)
+        ring_info = mol.GetRingInfo()
+        rings = ring_info.AtomRings()
+        bridging_rings = 0
+
+        for i in range(len(rings)):
+            for j in range(i + 1, len(rings)):
+                if len(set(rings[i]) & set(rings[j])) >= 2:
+                    bridging_rings += 1
+                    break
+
+        return np.array([bridging_rings])
+
+    def feature_base_labels(self) -> List[str]:
+        return ["bridging_rings_count"]
