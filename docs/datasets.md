@@ -5,7 +5,7 @@
 ``` python
 from polymetrix.datasets import CuratedGlassTempDataset
 
-dataset = CuratedGlassTempDataset(version, url)
+dataset = CuratedGlassTempDataset()
 
 print("Available features:", dataset.available_features)
 print("Available labels:", dataset.available_labels)

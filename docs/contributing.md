@@ -48,9 +48,12 @@ You can contribute to the project in the following ways:
 
 # Detailed Contribution Guidelines
 ### Contributing Featurizers
-You can enhance the polymer analysis capabilities by adding new featurizers to `PolyMetriX/src/polymetrix/featurizer.py`. Featurizers compute specific properties of polymers. Here’s how:
+You can enhance the polymer analysis capabilities by adding new featurizers to the `PolyMetriX/src/polymetrix/featurizers/` directory. Within this folder, you can extend functionality by modifying either the `chemical_featurizer.py` or `sidechain_backbone_featurizer.py` modules.
 
-1. Create a new Featurizer class in `PolyMetriX/src/polymetrix/featurizer.py`:
+If you are introducing new featurizers that capture spatial geometry, consider creating a new module, such as `geometry.py`. Here's how you can contribute a new featurizer:
+
+
+1. Create a new Featurizer class in `PolyMetriX/src/polymetrix/featurizers/{module}.py`:
     - Subclass `BaseFeatureCalculator` or `PolymerPartFeaturizer` (e.g., for sidechains, backbone, or full polymer).
     - Implement the `calculate()` method (or `featurize()` for polymer-specific featurizers) to compute your feature.
     - Define `feature_base_labels()` to name your feature(s).
@@ -79,17 +82,26 @@ You can contribute new polymer datasets (e.g., glass transition temperature, ten
 Example:
 ```python
 class CuratedDensityDataset(AbstractDataset):
-    def __init__(self, version: str, url: str, subset: Optional[Collection[int]] = None):
+    def __init__(self, subset: Optional[Collection[int]] = None):
         super().__init__()
-        self._version = version
-        self._url = url
-        csv_path = POLYMETRIX_PYSTOW_MODULE.ensure("CuratedDensityDataset", version, url=url, name=".csv")
+        default_version = "latest"  
+        default_url = "https://example.com/default_dataset.csv"  
+        
+        csv_path = POLYMETRIX_PYSTOW_MODULE.ensure(
+            "CuratedDensityDataset", default_version, url=default_url
+        )
         self._df = pd.read_csv(csv_path).reset_index(drop=True)
+        
         if subset is not None:
             self._df = self._df.iloc[subset].reset_index(drop=True)
+        
         self._psmiles = self._df["PSMILES"].to_numpy()
-        self._features = self._df[[col for col in self._df.columns if col.startswith("features.")]].to_numpy()
-        self._labels = self._df[[col for col in self._df.columns if col.startswith("labels.")]].to_numpy()
+        self._features = self._df[
+            [col for col in self._df.columns if col.startswith("features.")]
+        ].to_numpy()
+        self._labels = self._df[
+            [col for col in self._df.columns if col.startswith("labels.")]
+        ].to_numpy()
 ```
 2. Dataset Format
     - CSV columns must include:
