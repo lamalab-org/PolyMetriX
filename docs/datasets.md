@@ -15,7 +15,7 @@ print("Available metadata:", dataset.meta_info)
 This will output the list of available features, labels, and metadata for the dataset.
 
 
-Since, the dataset has been curated for the glass transition temperature (Tg) data for the polymers, the available labels are `labels.Exp_Tg(K)` and the available features are the list of features that are available in the dataset. In addition, this dataset also contains metadata information about the polymer, PSMILES, source, tg range, number of points, tg values, reliability, and standard deviation of the data.
+Since, the dataset has been curated for the glass transition temperature (Tg) data for the polymers, the available labels are `labels.Exp_Tg(K)` and the available features are the list of features that are available in the dataset. In addition, this dataset also contains metadata information about the polymer, PSMILES, source, Tg range, number of points, Tg values, reliability, and standard deviation of the data.
 
 The `meta.source` contain the following names of the sources from which the data has been obtained for Tg dataset along with links to the sources:
 
