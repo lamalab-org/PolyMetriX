@@ -43,8 +43,8 @@ nav:
   - How-To Guides: how_to_guides.md
   - Polymer Graphs: polymer.md
   - Datasets: datasets.md
-  - Examples: 
-      - Using featurizers: featurizers.ipynb
+  - Toy Examples: 
+      - Using featurizers: use_featurizers.ipynb
       - Training model: train_test_splitters.ipynb
   - API Reference:
       - API Overview: api.md
