@@ -17,23 +17,22 @@ class CuratedGlassTempDataset(AbstractDataset):
     LABEL_PREFIX = "labels."
     META_PREFIX = "meta."
 
+    DEFAULT_VERSION = "v1"
+    DEFAULT_URL = "https://zenodo.org/records/14980914/files/LAMALAB_CURATED_Tg_structured.csv?download=1"
+
     def __init__(
         self,
-        version: str,
-        url: str,
         feature_levels: List[str] = ALL_FEATURE_LEVELS,
         subset: Optional[Collection[int]] = None,
     ):
         """Initialize the Tg dataset.
          Args:
-            version (str): Version of the dataset
-            url (str): URL to the dataset
             feature_levels (List[str]): Feature levels to include
             subset (Optional[Collection[int]]): Indices to include in the dataset
          """
         super().__init__()
-        self._version = version
-        self._url = url
+        self._version = self.DEFAULT_VERSION
+        self._url = self.DEFAULT_URL
         self._feature_levels = feature_levels
 
         # Validate feature levels using set operations
@@ -51,7 +50,6 @@ class CuratedGlassTempDataset(AbstractDataset):
             "CuratedGlassTempDataset",
             self._version,
             url=self._url,
-            name=".csv",
         )
         self._df = pd.read_csv(str(csv_path)).reset_index(drop=True)
 
@@ -90,8 +88,6 @@ class CuratedGlassTempDataset(AbstractDataset):
 
     def get_subset(self, indices: Collection[int]) -> "CuratedGlassTempDataset":
         return CuratedGlassTempDataset(
-            version=self._version,
-            url=self._url,
             feature_levels=self._feature_levels,
             subset=indices,
         )
