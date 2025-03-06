@@ -12,7 +12,7 @@ This is achieved by converting the `PSMILES` representation into a graph-based r
 ## Distinguishing Backbone and Side Chains
 The process of classifying nodes into backbone and side chain components is handled by the `classify_backbone_and_sidechains` helper function in the `Polymer` class. This function uses the following steps to identify the backbone and side chain atoms:
 
-1. **Graph Construction**: The `PSMILES` representation of the polymer is converted into a graph using the `NetworkX` library. Special "asterisk" atoms (*) in the `PSMILES` notation represent connection points, often indicating the ends or repeating units of the polymer.
+1. **Graph Construction**: The `PSMILES` representation of the polymer is converted into a graph using the [`NetworkX`](https://networkx.org/documentation/stable/) library. 
 
 2. **Shortest Paths Between Connection Points**: The algorithm identifies all shortest paths between pairs of asterisk (*) nodes. These paths often correspond to the main chain or repeating units of the polymer, forming the initial backbone.
 
@@ -37,7 +37,7 @@ from polymetrix.featurizers.polymer import Polymer
 psmiles = Polymer("[*]CC(C(OCC(C)C)=O)[*]")
 polymer = Polymer.from_psmiles(psmiles)
 ```
-The psmiles is parsed into an `RDKit` molecule and converted to a `NetworkX` graph (`_mol_to_nx`).
+The PSMILES is parsed into an `RDKit` molecule and converted to a `NetworkX` graph (`_mol_to_nx`).
 
 Step 2: Identify Connection Points
 ```python
@@ -48,7 +48,7 @@ Output:
 ```
 Connection Points: [0, 10]
 ```
-The * atoms (nodes 0 and 10) are identified as connection points (`_identify_connection_points`).
+The * atoms (nodes 0 and 10) are identified as connection points.
 
 Step 3: Find Shortest Paths
 The `find_shortest_paths_between_stars` function computes the shortest path between nodes 0 and 10.
