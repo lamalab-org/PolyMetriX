@@ -45,7 +45,7 @@ For more detailed installation instructions, see the [documentation](https://lam
 from polymetrix.datasets import CuratedGlassTempDataset
 
 # Load the dataset
-dataset = CuratedGlassTempDataset(version=version, url=url)
+dataset = CuratedGlassTempDataset()
 ```
 
 ## Getting Features for Polymers
