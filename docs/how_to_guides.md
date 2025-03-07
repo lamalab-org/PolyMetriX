@@ -123,7 +123,7 @@ This will output the array of features and labels for the dataset, Which can be 
 ```python
 from polymetrix.datasets import CuratedGlassTempDataset
 
-dataset = CuratedGlassTempDataset(version, url)
+dataset = CuratedGlassTempDataset()
 features = dataset.get_features(idx=[0, 1, 2, 3, 4, 5, 6, 7, 8, 9])
 target = dataset.get_labels(idx=[0, 1, 2, 3, 4, 5, 6, 7, 8, 9])
 ```
