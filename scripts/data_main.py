@@ -49,6 +49,18 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+DEFAULT_META_COLUMNS = [
+    "polymer",
+    "source",
+    "tg_range",
+    "tg_values",
+    "num_of_points",
+    "std",
+    "reliability",
+]
+
+DEFAULT_LABEL_COLUMNS = ["Exp_Tg(K)"]
+
 
 FULL_POLYMER_FEATURIZERS = [
     (FullPolymerFeaturizer, BalabanJIndex, {}),
@@ -143,20 +155,6 @@ SIDECHAIN_LEVEL_FEATURIZERS = [
     (SideChainFeaturizer, HeteroatomCount, {}),
 ]
 
-
-DEFAULT_META_COLUMNS = [
-    "polymer",
-    "source",
-    "tg_range",
-    "tg_values",
-    "num_of_points",
-    "std",
-    "reliability",
-]
-
-DEFAULT_LABEL_COLUMNS = ["Exp_Tg(K)"]
-
-
 def create_featurizer_set(featurizer_config: list) -> List[object]:
     """Instantiate featurizers from configuration tuples."""
     featurizers = []
@@ -168,27 +166,27 @@ def create_featurizer_set(featurizer_config: list) -> List[object]:
             featurizers.append(container_cls(inner_feat))
     return featurizers
 
-
 def get_featurizer() -> tuple:
     """Create and configure the MultipleFeaturizer with prefixed feature labels."""
-    full_poly = create_featurizer_set(FULL_POLYMER_FEATURIZERS)
-    backbone = create_featurizer_set(BACKBONE_LEVEL_FEATURIZERS)
-    sidechain = create_featurizer_set(SIDECHAIN_LEVEL_FEATURIZERS)
+    featurizers = []
+    
+    # Define feature categories
+    feature_categories = {
+        "fullpolymerlevel.features": FULL_POLYMER_FEATURIZERS,
+        "backbonelevel.features": BACKBONE_LEVEL_FEATURIZERS,
+        "sidechainlevel.features": SIDECHAIN_LEVEL_FEATURIZERS
+    }
 
-    def prefix_labels(featurizers: list, prefix: str) -> List[str]:
-        return [
-            f"{prefix}.{label}" for f in featurizers for label in f.feature_labels()
-        ]
+    feature_labels = []
 
-    features = (
-        sidechain + backbone + full_poly,
-        prefix_labels(sidechain, "sidechainlevel.features")
-        + prefix_labels(backbone, "backbonelevel.features")
-        + prefix_labels(full_poly, "fullpolymerlevel.features"),
-    )
+    for prefix, feature_set in feature_categories.items():
+        featurizer_list = create_featurizer_set(feature_set)
+        featurizers.extend(featurizer_list)
+        feature_labels.extend(
+            [f"{prefix}.{label}" for f in featurizer_list for label in f.feature_labels()]
+        )
 
-    return MultipleFeaturizer(features[0]), features[1]
-
+    return MultipleFeaturizer(featurizers), feature_labels
 
 def compute_features(psmiles: str, featurizer: MultipleFeaturizer) -> pd.Series:
     """Compute features for a single polymer SMILES string."""
@@ -198,7 +196,6 @@ def compute_features(psmiles: str, featurizer: MultipleFeaturizer) -> pd.Series:
     except Exception as e:
         logger.error(f"Error processing {psmiles}: {str(e)}")
         return pd.Series([None] * len(featurizer.feature_labels()))
-
 
 def process_dataframe(
     df: pd.DataFrame,
@@ -219,21 +216,26 @@ def process_dataframe(
 
     column_renames = {}
 
-    # Handle label columns
-    for col in label_columns:
-        if col in df.columns:
-            column_renames[col] = f"labels.{col}"
+    # Check for and handle missing columns
+    for col_type, columns in {"meta": meta_columns, "label": label_columns}.items():
+        missing_cols = [col for col in columns if col not in df.columns]
+        if missing_cols:
+            logger.warning(f"Warning: Missing {col_type} columns: {missing_cols}. These will be filled with NaN.")
+            for col in missing_cols:
+                df[col] = None 
 
-    # Handle meta columns
-    for col in meta_columns:
+    # Rename existing meta and label columns
+    for col in meta_columns + label_columns:
         if col in df.columns:
-            column_renames[col] = f"meta.{col}"
+            column_renames[col] = f"{'meta' if col in meta_columns else 'labels'}.{col}"
 
-    # Combine and rename columns
-    result_df = pd.concat([df.rename(columns=column_renames), features_df], axis=1)
+    df.rename(columns=column_renames, inplace=True)
+
+    # Combine with computed features
+    result_df = pd.concat([df, features_df], axis=1)
     result_df.to_csv(output_path, index=False)
+    
     logger.info(f"Saved processed data to {output_path}")
-
 
 def main(
     input_path: str,
@@ -252,16 +254,10 @@ def main(
 
     df = pd.read_csv(input_path)
 
-    missing_columns = {
-        "PSMILES": [psmiles_column],
-        "meta": meta_cols,
-        "label": label_cols,
-    }
-
-    for col_type, columns in missing_columns.items():
-        missing = [col for col in columns if col not in df.columns]
-        if missing:
-            raise ValueError(f"Missing columns: {missing}")
+    # Handle missing PSMILES column
+    if psmiles_column not in df.columns:
+        logger.error(f"Missing required column: {psmiles_column}")
+        return
 
     process_dataframe(
         df=df,
@@ -270,7 +266,6 @@ def main(
         label_columns=label_cols,
         output_path=output_path,
     )
-
 
 if __name__ == "__main__":
     fire.Fire(main)
