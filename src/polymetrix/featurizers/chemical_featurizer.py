@@ -332,13 +332,32 @@ class HalogenCounts(BaseFeatureCalculator):
 
     def calculate(self, mol: Chem.Mol, sanitize: bool = True) -> np.ndarray:
         self._sanitize(mol, sanitize)
-        halogen_count = sum(
-            1 for atom in mol.GetAtoms() if atom.GetAtomicNum() in [9, 17, 35, 53]
+        halogen_counts = {9: 0, 17: 0, 35: 0, 53: 0}  # F, Cl, Br, I
+        for atom in mol.GetAtoms():
+            atomic_num = atom.GetAtomicNum()
+            if atomic_num in halogen_counts:
+                halogen_counts[atomic_num] += 1
+
+        total_halogens = sum(halogen_counts.values())
+
+        return np.array(
+            [
+                total_halogens,
+                halogen_counts[9],
+                halogen_counts[17],
+                halogen_counts[35],
+                halogen_counts[53],
+            ]
         )
-        return np.array([halogen_count])
 
     def feature_base_labels(self) -> List[str]:
-        return ["halogen_count"]
+        return [
+            "total_halogens",
+            "fluorine_count",
+            "chlorine_count",
+            "bromine_count",
+            "iodine_count",
+        ]
 
 
 class BridgingRingsCount(BaseFeatureCalculator):
