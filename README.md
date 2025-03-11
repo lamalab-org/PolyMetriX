@@ -19,7 +19,7 @@
 <p align="center">
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="./docs/figures/overview-dark.png">
-  <img alt="PolyMetriX Overview" src="./docs/figures/overview_revised.png">
+  <img alt="PolyMetriX Overview" src="./docs/figures/overview.png">
 </picture>
 </p>
 
