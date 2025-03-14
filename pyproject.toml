@@ -37,7 +37,7 @@ dependencies = [
   "radonpy-pypi",
   "rdkit",
   "matplotlib",
-  "mofdscribe @ git+https://github.com/kjappelbaum/mofdscribe.git@main",
+  "mofdscribe",
   "pystow",
 ]
 
@@ -53,6 +53,9 @@ dev = [
   "mkdocs-material",
   "mkdocstrings[python]",
 ]
+
+[tool.setuptools]
+license-files = []
 
 [tool.setuptools.package-data]
 template = ["py.typed"]
