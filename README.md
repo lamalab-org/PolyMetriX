@@ -25,7 +25,7 @@
 
 *PolyMetriX* is a comprehensive Python library that powers the entire machine learning workflow for polymer informatics. From data preparation to feature engineering, it provides a unified framework for developing structure-property relationships in polymer science.
 
-For more detailed information, see the [documentation](https://lamalab-org.github.io/polymetrix/).
+For more detailed information, see the [documentation](https://lamalab-org.github.io/PolyMetriX/).
 
 ## ✨ Installing PolyMetriX
 
