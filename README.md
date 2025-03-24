@@ -19,11 +19,11 @@
 <p align="center">
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="./docs/figures/overview-dark.png">
-  <img alt="PolyMetriX Overview" src="./docs/figures/overview.png">
+  <img alt="PolyMetriX Overview" src="./docs/figures/overview_polymetrix.png">
 </picture>
 </p>
 
-*PolyMetriX* is a comprehensive Python library that powers the entire machine learning workflow for polymer informatics. From data preparation to feature engineering, it provides a unified framework for developing structure-property relationships in polymer science.
+_PolyMetriX_ is a comprehensive Python library that powers the entire machine learning workflow for polymer informatics. From data preparation to feature engineering, it provides a unified framework for developing structure-property relationships in polymer science.
 
 For more detailed information, see the [documentation](https://lamalab-org.github.io/PolyMetriX/).
 
@@ -36,6 +36,7 @@ For more detailed information, see the [documentation](https://lamalab-org.githu
 ```bash
 pip install polymetrix
 ```
+
 For more detailed installation instructions, see the [documentation](https://lamalab-org.github.io/PolyMetriX/installation/).
 
 ## Loading Curated Glass Transition Temperature Dataset
@@ -61,8 +62,8 @@ featurizer = FullPolymerFeaturizer(MolecularWeight())
 polymer = Polymer.from_psmiles('*CCCCCCNC(=O)c1ccc(C(=O)N*)c(Sc2ccccc2)c1')
 result = featurizer.featurize(polymer)
 ```
-For more detailed usage instructions, see the [documentation](https://lamalab-org.github.io/PolyMetriX/how_to_guides/).
 
+For more detailed usage instructions, see the [documentation](https://lamalab-org.github.io/PolyMetriX/how_to_guides/).
 
 # How to contribute
 
