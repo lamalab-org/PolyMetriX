@@ -37,3 +37,23 @@ class TgSplitter(BaseSplitter):
             idx=range(len(self._ds)), label_names=[self._label_name]
         ).flatten()
         return quantile_binning(tg_values, self._grouping_q)
+
+
+class PolymerClassSplitter(BaseSplitter):
+    """Splitter based on polymer class"""
+
+    def __init__(
+        self,
+        ds: AbstractDataset,
+        column_name: str = "meta.polymer_class",
+        shuffle: bool = True,
+        random_state: Optional[Union[int, np.random.RandomState]] = None,
+        **kwargs,
+    ) -> None:
+        self._column_name = column_name
+        super().__init__(ds=ds, shuffle=shuffle, random_state=random_state, **kwargs)
+
+    def _get_groups(self) -> Collection[str]:
+        col_idx = self._ds._meta_names.index(self._column_name)
+        metadata = self._ds._meta_data[:, col_idx]
+        return metadata.flatten()
