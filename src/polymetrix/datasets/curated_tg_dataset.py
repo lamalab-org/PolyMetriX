@@ -18,7 +18,7 @@ class CuratedGlassTempDataset(AbstractDataset):
     META_PREFIX = "meta."
 
     DEFAULT_VERSION = "v1"
-    DEFAULT_URL = "https://zenodo.org/records/14980914/files/LAMALAB_CURATED_Tg_structured.csv?download=1"
+    DEFAULT_URL = "https://zenodo.org/records/15210035/files/LAMALAB_CURATED_Tg_structured_polymerclass.csv?download=1"
 
     def __init__(
         self,
@@ -26,10 +26,10 @@ class CuratedGlassTempDataset(AbstractDataset):
         subset: Optional[Collection[int]] = None,
     ):
         """Initialize the Tg dataset.
-         Args:
-            feature_levels (List[str]): Feature levels to include
-            subset (Optional[Collection[int]]): Indices to include in the dataset
-         """
+        Args:
+           feature_levels (List[str]): Feature levels to include
+           subset (Optional[Collection[int]]): Indices to include in the dataset
+        """
         super().__init__()
         self._version = self.DEFAULT_VERSION
         self._url = self.DEFAULT_URL
