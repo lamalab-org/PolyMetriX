@@ -4,6 +4,10 @@ import networkx as nx
 from rdkit import Chem
 from rdkit.Chem.Descriptors import ExactMolWt
 
+import numpy as np
+import torch
+from torch.nn.functional import cosine_similarity
+
 
 class Polymer:
     """A class to represent a polymer molecule and extract its backbone and sidechain information.
@@ -21,27 +25,90 @@ class Polymer:
 
     def __init__(self):
         self._psmiles: Optional[str] = None
+        self._bigsmiles: Optional[str] = None
+        self._psmiles_embed: Optional[np.ndarray] = None
+        self._bigsmiles_embed: Optional[np.ndarray] = None
         self._graph: Optional[nx.Graph] = None
-        self._backbone_nodes: Optional[List[int]] = None
-        self._sidechain_nodes: Optional[List[int]] = None
-        self._connection_points: Optional[List[int]] = None
+        self._backbone_nodes: Optional[list[int]] = None
+        self._sidechain_nodes: Optional[list[int]] = None
+        self._connection_points: Optional[list[int]] = None
 
     @classmethod
-    def from_psmiles(cls, psmiles: str) -> "Polymer":
+    def from_psmiles(
+        cls,
+        psmiles: str,
+        psmiles_embed: Optional[np.ndarray] = None,
+        dataset=None,
+        embed_column: str = "meta.psmiles_embed",
+    ) -> "Polymer":
         """Creates a Polymer instance from a pSMILES string.
 
         Args:
             psmiles: str, the pSMILES string representing the polymer molecule.
+            psmiles_embed: Optional[np.ndarray], the embedding for the pSMILES string.
+            dataset: Optional dataset to lookup embedding if not provided.
+            embed_column: str, the column name for pSMILES embeddings in the dataset.
 
         Returns:
             Polymer: A new Polymer object initialized with the given pSMILES string.
 
         Raises:
-            ValueError: If the pSMILES string is invalid.
+            ValueError: If the pSMILES string is invalid or not found in dataset.
         """
         polymer = cls()
         polymer.psmiles = psmiles
+        if psmiles_embed is not None:
+            polymer._psmiles_embed = psmiles_embed
+        elif dataset is not None:
+            polymer._psmiles_embed = polymer._lookup_embedding(
+                dataset, psmiles, "psmiles", embed_column
+            )
         return polymer
+
+    @classmethod
+    def from_bigsmiles(
+        cls,
+        bigsmiles: str,
+        bigsmiles_embed: Optional[np.ndarray] = None,
+        dataset=None,
+        embed_column: str = "meta.bigsmiles_embed",
+    ) -> "Polymer":
+        """Creates a Polymer instance from a BIGSMILES string.
+
+        Args:
+            bigsmiles: str, the BIGSMILES string representing the polymer molecule.
+            bigsmiles_embed: Optional[np.ndarray], the embedding for the BIGSMILES string.
+            dataset: Optional dataset to lookup embedding if not provided.
+            embed_column: str, the column name for BIGSMILES embeddings in the dataset.
+
+        Returns:
+            Polymer: A new Polymer object initialized with the given BIGSMILES string.
+
+        Raises:
+            ValueError: If the BIGSMILES string is not found in dataset.
+        """
+        polymer = cls()
+        polymer._bigsmiles = bigsmiles
+        if bigsmiles_embed is not None:
+            polymer._bigsmiles_embed = bigsmiles_embed
+        elif dataset is not None:
+            polymer._bigsmiles_embed = polymer._lookup_embedding(
+                dataset, bigsmiles, "bigsmiles", embed_column
+            )
+        return polymer
+
+    def _lookup_embedding(
+        self, dataset, string: str, string_type: str, embed_column: str
+    ) -> np.ndarray:
+        """Looks up an embedding in a dataset for a given string."""
+        try:
+            string_list = list(dataset.__getattribute__(string_type))
+            idx = string_list.index(string)
+            return dataset.get_meta([idx], [embed_column])[0]
+        except ValueError as e:
+            raise ValueError(
+                f"{string_type.upper()} string not found in dataset: {string}"
+            ) from e
 
     @property
     def psmiles(self) -> Optional[str]:
@@ -71,7 +138,99 @@ class Polymer:
             self._identify_connection_points()
             self._identify_backbone_and_sidechain()
         except Exception as e:
-            raise ValueError(f"Error processing pSMILES: {str(e)}") from e
+            raise ValueError(f"Error processing pSMILES: {e!s}") from e
+
+    @property
+    def bigsmiles(self) -> Optional[str]:
+        """Gets the BIGSMILES string of the polymer.
+
+        Returns:
+            Optional[str]: The BIGSMILES string, or None if not set.
+        """
+        return self._bigsmiles
+
+    @bigsmiles.setter
+    def bigsmiles(self, value: str):
+        """Sets the BIGSMILES string.
+
+        Args:
+            value: str, the BIGSMILES string to set.
+        """
+        self._bigsmiles = value
+
+    def set_psmiles_embed(self, embed: np.ndarray):
+        """Sets the pSMILES embedding.
+
+        Args:
+            embed: np.ndarray, the embedding array for the pSMILES string.
+        """
+        self._psmiles_embed = embed
+
+    def set_bigsmiles_embed(self, embed: np.ndarray):
+        """Sets the BIGSMILES embedding.
+
+        Args:
+            embed: np.ndarray, the embedding array for the BIGSMILES string.
+        """
+        self._bigsmiles_embed = embed
+
+    def _parse_embedding(self, embed: np.ndarray) -> torch.Tensor:
+        """Converts an embedding (array or string) to a torch.Tensor.
+
+        Args:
+
+        embed: np.ndarray or str, the embedding to parse.
+        """
+        if isinstance(embed, np.ndarray) and embed.dtype == object:
+            embed_data = np.fromstring(embed[0].strip("[]"), sep=" ")
+        else:
+            embed_data = (
+                np.fromstring(embed.strip("[]"), sep=" ")
+                if isinstance(embed, str)
+                else embed
+            )
+        return torch.tensor(embed_data, dtype=torch.float32).unsqueeze(0)
+
+    def polymer_dist(self, other: "Polymer") -> float:
+        """Calculate cosine similarity between two polymers using their embeddings.
+
+        Args:
+            other: Polymer, another polymer to compare with.
+
+        Returns:
+            float: Cosine similarity between the two polymers.
+
+        Raises:
+            ValueError: If embeddings are not available or representation types don't match.
+        """
+        if self._psmiles_embed is not None and other._psmiles_embed is not None:
+            embed1 = self._parse_embedding(self._psmiles_embed)
+            embed2 = self._parse_embedding(other._psmiles_embed)
+        elif self._bigsmiles_embed is not None and other._bigsmiles_embed is not None:
+            embed1 = self._parse_embedding(self._bigsmiles_embed)
+            embed2 = self._parse_embedding(other._bigsmiles_embed)
+        else:
+            raise ValueError(
+                "Both polymers must have embeddings of the same type (pSMILES or BIGSMILES)"
+            )
+        return cosine_similarity(embed1, embed2, dim=1).item()
+
+    def __eq__(self, other: "Polymer", threshold: float = 0.95) -> bool:
+        """Check if two polymers are equal based on embedding similarity.
+
+        Args:
+            other: Polymer, another polymer to compare with.
+            threshold: float, similarity threshold for considering polymers equal.
+
+        Returns:
+            bool: True if polymers are considered equal, False otherwise.
+        """
+        if not isinstance(other, Polymer):
+            return False
+        try:
+            return self.polymer_dist(other) >= threshold
+        except ValueError:
+            return False
 
     def _mol_to_nx(self, mol: Chem.Mol) -> nx.Graph:
         """Converts an RDKit molecule to a NetworkX graph.
@@ -115,20 +274,20 @@ class Polymer:
         )
 
     @property
-    def backbone_nodes(self) -> List[int]:
+    def backbone_nodes(self) -> list[int]:
         """Gets the list of backbone node indices.
 
         Returns:
-            List[int]: List of node indices representing the backbone.
+            list[int]: List of node indices representing the backbone.
         """
         return self._backbone_nodes
 
     @property
-    def sidechain_nodes(self) -> List[int]:
+    def sidechain_nodes(self) -> list[int]:
         """Gets the list of sidechain node indices.
 
         Returns:
-            List[int]: List of node indices representing the sidechains.
+            list[int]: List of node indices representing the sidechains.
         """
         return self._sidechain_nodes
 
@@ -143,11 +302,11 @@ class Polymer:
 
     def get_backbone_and_sidechain_molecules(
         self,
-    ) -> Tuple[List[Chem.Mol], List[Chem.Mol]]:
+    ) -> Tuple[list[Chem.Mol], list[Chem.Mol]]:
         """Extracts RDKit molecule objects for the backbone and sidechains.
 
         Returns:
-            Tuple[List[Chem.Mol], List[Chem.Mol]]: A tuple containing a list with the backbone
+            Tuple[list[Chem.Mol], list[Chem.Mol]]: A tuple containing a list with the backbone
                 molecule and a list of sidechain molecules.
         """
         backbone_mol = self._subgraph_to_mol(self._graph.subgraph(self._backbone_nodes))
@@ -159,7 +318,7 @@ class Polymer:
         ]
         return [backbone_mol], sidechain_mols
 
-    def get_backbone_and_sidechain_graphs(self) -> Tuple[nx.Graph, List[nx.Graph]]:
+    def get_backbone_and_sidechain_graphs(self) -> tuple[nx.Graph, list[nx.Graph]]:
         """Extracts NetworkX graphs for the backbone and sidechains.
 
         Returns:
@@ -205,7 +364,7 @@ class Polymer:
         mol = Chem.MolFromSmiles(self._psmiles)
         return ExactMolWt(mol)
 
-    def get_connection_points(self) -> List[int]:
+    def get_connection_points(self) -> list[int]:
         """Gets the list of connection point node indices.
 
         Returns:
@@ -215,7 +374,7 @@ class Polymer:
 
 
 # Helper functions for backbone/sidechain classification
-def find_shortest_paths_between_stars(graph: nx.Graph) -> List[List[int]]:
+def find_shortest_paths_between_stars(graph: nx.Graph) -> list[list[int]]:
     """Finds shortest paths between all pairs of asterisk (*) nodes in the graph.
 
     Args:
@@ -241,8 +400,8 @@ def find_shortest_paths_between_stars(graph: nx.Graph) -> List[List[int]]:
 
 
 def find_cycles_including_paths(
-    graph: nx.Graph, paths: List[List[int]]
-) -> List[List[int]]:
+    graph: nx.Graph, paths: list[list[int]]
+) -> list[list[int]]:
     """Identifies cycles in the graph that include nodes from the given paths.
 
     Args:
@@ -264,7 +423,7 @@ def find_cycles_including_paths(
     return [list(cycle) for cycle in unique_cycles]
 
 
-def add_degree_one_nodes_to_backbone(graph: nx.Graph, backbone: List[int]) -> List[int]:
+def add_degree_one_nodes_to_backbone(graph: nx.Graph, backbone: List[int]) -> list[int]:
     """Adds degree-1 nodes connected to backbone nodes to the backbone list.
 
     Args:
@@ -282,7 +441,7 @@ def add_degree_one_nodes_to_backbone(graph: nx.Graph, backbone: List[int]) -> Li
     return backbone
 
 
-def classify_backbone_and_sidechains(graph: nx.Graph) -> Tuple[List[int], List[int]]:
+def classify_backbone_and_sidechains(graph: nx.Graph) -> tuple[list[int], list[int]]:
     """Classifies nodes into backbone and sidechain components based on paths and cycles.
 
     Args:
