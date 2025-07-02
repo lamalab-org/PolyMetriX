@@ -18,12 +18,14 @@ class CuratedGlassTempDataset(AbstractDataset):
     META_PREFIX = "meta."
 
     DEFAULT_VERSION = "v1"
-    DEFAULT_URL = "https://zenodo.org/records/15210035/files/LAMALAB_CURATED_Tg_structured_polymerclass.csv?download=1"
+    DEFAULT_URL = "https://zenodo.org/records/15789599/files/LAMALAB_CURATED_Tg_structured_polymerclass_with_embeddings.csv?download=1"
 
     def __init__(
         self,
-        feature_levels: List[str] = ALL_FEATURE_LEVELS,
+        feature_levels: list[str] = ALL_FEATURE_LEVELS,
         subset: Optional[Collection[int]] = None,
+        psmiles_column: str = "PSMILES",
+        bigsmiles_column: str = "BIGSMILES",
     ):
         """Initialize the Tg dataset.
         Args:
@@ -34,6 +36,8 @@ class CuratedGlassTempDataset(AbstractDataset):
         self._version = self.DEFAULT_VERSION
         self._url = self.DEFAULT_URL
         self._feature_levels = feature_levels
+        self._psmiles_column = psmiles_column
+        self._bigsmiles_column = bigsmiles_column
 
         # Validate feature levels using set operations
         if not set(self._feature_levels).issubset(self.ALL_FEATURE_LEVELS):
@@ -56,7 +60,8 @@ class CuratedGlassTempDataset(AbstractDataset):
         if subset is not None:
             self._df = self._df.iloc[subset].reset_index(drop=True)
 
-        self._psmiles = self._df["PSMILES"].to_numpy()
+        self._psmiles = self._df[self._psmiles_column].to_numpy()
+        self._bigsmiles = self._df[self._bigsmiles_column].to_numpy()
 
         allowed_prefixes = [
             f"{level}.{self.FEATURE_PREFIX}" for level in self._feature_levels

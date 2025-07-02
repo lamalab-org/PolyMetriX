@@ -13,6 +13,7 @@ class AbstractDataset(ABC):
         self._features = None
         self._labels = None
         self._psmiles = None
+        self._bigsmiles = None
         self._feature_names = []
         self._label_names = []
         self._meta_names = []
@@ -35,6 +36,7 @@ class AbstractDataset(ABC):
         subset._labels = self._labels[indices]
         subset._meta_data = self._meta_data[indices]
         subset._psmiles = self._psmiles[indices] if self._psmiles is not None else None
+        subset._bigsmiles = self._bigsmiles[indices] if self._bigsmiles is not None else None
         subset._feature_names = self._feature_names.copy()
         subset._label_names = self._label_names.copy()
         subset._meta_names = self._meta_names.copy()
@@ -71,6 +73,14 @@ class AbstractDataset(ABC):
             np.ndarray: Array of polymer SMILES strings
         """
         return self._psmiles
+    
+    @property
+    def bigsmiles(self) -> np.ndarray:
+        """Return the polymer BIGSMILES strings.
+        Returns:
+            np.ndarray: Array of polymer BIGSMILES strings
+        """
+        return self._bigsmiles
 
     def __len__(self):
         """Return the number of entries in the dataset."""
