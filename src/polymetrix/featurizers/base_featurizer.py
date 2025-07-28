@@ -92,3 +92,22 @@ class PolymerPartFeaturizer:
             ]
         else:
             return [self.__class__.__name__.lower()]
+
+
+class MoleculeFeaturizer:
+    """Base class for featurizers that work with general molecules."""
+
+    def __init__(self, calculator: Optional[BaseFeatureCalculator] = None):
+        self.calculator = calculator
+
+    def featurize(self, molecule) -> np.ndarray:
+        raise NotImplementedError("Featurize method must be implemented by subclasses")
+
+    def feature_labels(self) -> List[str]:
+        if self.calculator:
+            return [
+                f"{label}_{self.__class__.__name__.lower()}"
+                for label in self.calculator.feature_labels()
+            ]
+        else:
+            return [self.__class__.__name__.lower()]
