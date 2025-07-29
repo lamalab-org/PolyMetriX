@@ -123,6 +123,67 @@ result = featurizer.featurize(molecule)
 
 The result will be a NumPy array of `mol_weight_featurizer, hbond_donors, hbond_acceptors, rotatable_bonds` values for the given molecule.
 
+## Comparator
+
+### Comparing a polymer with a molecule given a featurizer
+
+```python
+from polymetrix.featurizers.polymer import Polymer
+from polymetrix.featurizers.molecule import Molecule, FullMolecularFeaturizer
+from polymetrix.featurizers.chemical_featurizer import MolecularWeight, NumHBondDonors, NumHBondAcceptors, NumRotatableBonds
+from polymetrix.featurizers.sidechain_backbone_featurizer import FullPolymerFeaturizer
+from polymetrix.comparator import PolymerMoleculeComparator
+
+# initialize with required featurizers
+polymer_featurizer = FullPolymerFeaturizer(MolecularWeight())
+molecule_featurizer = FullMolecularFeaturizer(MolecularWeight())
+
+polymer = Polymer.from_psmiles('*CCCCCCNC(=O)c1ccc(C(=O)N*)c(Sc2ccccc2)c1')
+molecule = Molecule.from_smiles('CC(=O)OC1=CC=CC=C1C(=O)O')
+
+comparator = PolymerMoleculeComparator(polymer_featurizer, molecule_featurizer) # (1)
+difference = comparator.compare(polymer, molecule) # (2)
+```
+
+The `PolymerMoleculeComparator` class is used to compare a polymer with a molecule given a featurizer. The `compare` method returns the difference between the polymer and the molecule in terms of the features extracted by the featurizers.
+
+### Comparing a polymer with a molecule given multiple featurizers
+
+```python
+from polymetrix.featurizers.polymer import Polymer
+from polymetrix.featurizers.molecule import Molecule, FullMolecularFeaturizer
+from polymetrix.featurizers.chemical_featurizer import MolecularWeight, NumHBondDonors, NumHBondAcceptors, NumRotatableBonds
+from polymetrix.featurizers.sidechain_backbone_featurizer import FullPolymerFeaturizer
+from polymetrix.featurizers.multiple_featurizer import MultipleFeaturizer
+from polymetrix.featurizers.comparator import PolymerMoleculeComparator
+
+# initialize with required featurizers
+polymer_featurizers = [
+    FullPolymerFeaturizer(MolecularWeight()),
+    FullPolymerFeaturizer(NumHBondDonors()),
+    FullPolymerFeaturizer(NumHBondAcceptors()),
+    FullPolymerFeaturizer(NumRotatableBonds())
+]
+
+molecule_featurizers = [
+    FullMolecularFeaturizer(MolecularWeight()),
+    FullMolecularFeaturizer(NumHBondDonors()),
+    FullMolecularFeaturizer(NumHBondAcceptors()),
+    FullMolecularFeaturizer(NumRotatableBonds())
+]
+
+polymer = Polymer.from_psmiles('*CCCCCCNC(=O)c1ccc(C(=O)N*)c(Sc2ccccc2)c1')
+molecule = Molecule.from_smiles('CC(=O)OC1=CC=CC=C1C(=O)O')
+
+polymer_featurizer = MultipleFeaturizer(polymer_featurizers) # (1)
+molecule_featurizer = MultipleFeaturizer(molecule_featurizers) # (2)
+
+comparator = PolymerMoleculeComparator(polymer_featurizer, molecule_featurizer) # (3)
+difference = comparator.compare(polymer, molecule) # (4)
+```
+
+The `MultipleFeaturizer` class is used to combine multiple featurizers into a single featurizer object. The `PolymerMoleculeComparator` class is then used to compare the polymer and molecule using the combined featurizers. The `compare` method returns the difference between the polymer and the molecule in terms of the features extracted by the featurizers.
+
 ## Datasets
 
 ### Loading datasets
