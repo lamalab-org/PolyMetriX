@@ -6,8 +6,10 @@ from polymetrix.featurizers.base_featurizer import PolymerPartFeaturizer
 class MultipleFeaturizer:
     def __init__(self, featurizers: List[PolymerPartFeaturizer]):
         self.featurizers = featurizers
+        self._last_polymer = None
 
     def featurize(self, polymer) -> np.ndarray:
+        self._last_polymer = polymer  # Store for label generation
         features = []
         for featurizer in self.featurizers:
             feature = featurizer.featurize(polymer)
@@ -17,9 +19,26 @@ class MultipleFeaturizer:
         return np.concatenate(features)
 
     def feature_labels(self) -> List[str]:
+        """Return feature labels with '_with_terminalgroups' suffix when applicable."""
         labels = []
         for featurizer in self.featurizers:
-            labels.extend(featurizer.feature_labels())
+            featurizer_labels = featurizer.feature_labels()
+            labels.extend(featurizer_labels)
+
+        # Add terminal groups suffix if last polymer had terminal groups
+        if (
+            hasattr(self, "_last_polymer")
+            and self._last_polymer
+            and hasattr(self._last_polymer, "terminal_groups")
+            and self._last_polymer.terminal_groups
+        ):
+            labels = [
+                label.replace(
+                    "_backbonefeaturizer", "_with_terminalgroups_backbonefeaturizer"
+                )
+                for label in labels
+            ]
+
         return labels
 
     def citations(self) -> List[str]:

@@ -1,4 +1,4 @@
-from typing import List, Optional, Tuple
+from typing import List, Optional, Tuple, Dict
 
 import networkx as nx
 from rdkit import Chem
@@ -6,35 +6,36 @@ from rdkit.Chem.Descriptors import ExactMolWt
 
 
 class Polymer:
-    """A class to represent a polymer molecule and extract its backbone and sidechain information.
+    """Represents a polymer molecule with its backbone and sidechain information.
 
     Attributes:
-        psmiles: Optional[str], the pSMILES string representing the polymer molecule.
-        graph: Optional[nx.Graph], a NetworkX graph representing the polymer structure.
-        backbone_nodes: Optional[List[int]], list of node indices forming the polymer backbone.
-        sidechain_nodes: Optional[List[int]], list of node indices forming the sidechains.
-        connection_points: Optional[List[int]], list of node indices representing connection points.
-
-    Raises:
-        ValueError: If the provided pSMILES string is invalid or cannot be processed.
+        psmiles: Optional[str], the pSMILES string of the polymer.
+        terminal_groups: Optional[Dict[int, str]], maps node indices to terminal group SMILES.
+        graph: Optional[nx.Graph], the NetworkX graph of the polymer structure.
+        backbone_nodes: Optional[List[int]], node indices forming the backbone.
+        sidechain_nodes: Optional[List[int]], node indices forming the sidechains.
+        connection_points: Optional[List[int]], node indices of connection points.
+        _mol: Optional[Chem.Mol], the RDKit molecule object (internal use).
     """
 
     def __init__(self):
-        self._psmiles: Optional[str] = None
-        self._graph: Optional[nx.Graph] = None
-        self._backbone_nodes: Optional[List[int]] = None
-        self._sidechain_nodes: Optional[List[int]] = None
-        self._connection_points: Optional[List[int]] = None
+        self._psmiles = None
+        self.terminal_groups = None
+        self.graph = None
+        self.backbone_nodes = None
+        self.sidechain_nodes = None
+        self.connection_points = None
+        self._mol = None
 
     @classmethod
     def from_psmiles(cls, psmiles: str) -> "Polymer":
         """Creates a Polymer instance from a pSMILES string.
 
         Args:
-            psmiles: str, the pSMILES string representing the polymer molecule.
+            psmiles: The pSMILES string representing the polymer.
 
         Returns:
-            Polymer: A new Polymer object initialized with the given pSMILES string.
+            A new Polymer instance.
 
         Raises:
             ValueError: If the pSMILES string is invalid.
@@ -45,42 +46,56 @@ class Polymer:
 
     @property
     def psmiles(self) -> Optional[str]:
-        """Gets the pSMILES string of the polymer.
-
-        Returns:
-            Optional[str]: The pSMILES string, or None if not set.
-        """
+        """The pSMILES string of the polymer."""
         return self._psmiles
 
     @psmiles.setter
     def psmiles(self, value: str):
-        """Sets the pSMILES string and updates the polymer's internal structure.
+        """Sets the pSMILES string and updates the polymer's structure.
 
         Args:
-            value: str, the pSMILES string to set.
+            value: The pSMILES string to set.
 
         Raises:
-            ValueError: If the pSMILES string is invalid or cannot be processed.
+            ValueError: If the pSMILES string is None, empty, or invalid.
         """
+        if not value or not isinstance(value, str):
+            raise ValueError("pSMILES cannot be None or empty")
         try:
             mol = Chem.MolFromSmiles(value)
             if mol is None:
                 raise ValueError("Invalid pSMILES string")
             self._psmiles = value
-            self._graph = self._mol_to_nx(mol)
+            self._mol = mol
+            self.graph = self._mol_to_nx(mol)
             self._identify_connection_points()
             self._identify_backbone_and_sidechain()
         except Exception as e:
             raise ValueError(f"Error processing pSMILES: {str(e)}") from e
 
-    def _mol_to_nx(self, mol: Chem.Mol) -> nx.Graph:
+    @property
+    def terminal_groups(self) -> Optional[Dict[int, str]]:
+        """Maps node indices to terminal group SMILES."""
+        return self._terminal_groups
+
+    @terminal_groups.setter
+    def terminal_groups(self, value: Dict[int, str]):
+        """Sets terminal groups for specific node positions.
+
+        Args:
+            value: Mapping of node indices to terminal group SMILES.
+        """
+        self._terminal_groups = value
+
+    @staticmethod
+    def _mol_to_nx(mol: Chem.Mol) -> nx.Graph:
         """Converts an RDKit molecule to a NetworkX graph.
 
         Args:
-            mol: Chem.Mol, the RDKit molecule object to convert.
+            mol: The RDKit molecule to convert.
 
         Returns:
-            nx.Graph: A NetworkX graph representing the molecule's structure.
+            A NetworkX graph representing the molecule's structure.
         """
         G = nx.Graph()
         for atom in mol.GetAtoms():
@@ -102,94 +117,110 @@ class Polymer:
 
     def _identify_connection_points(self):
         """Identifies connection points (asterisk atoms) in the polymer graph."""
-        self._connection_points = [
-            node
-            for node, data in self._graph.nodes(data=True)
-            if data["element"] == "*"
+        self.connection_points = [
+            node for node, data in self.graph.nodes(data=True) if data["element"] == "*"
         ]
 
     def _identify_backbone_and_sidechain(self):
         """Classifies nodes into backbone and sidechain components."""
-        self._backbone_nodes, self._sidechain_nodes = classify_backbone_and_sidechains(
-            self._graph
+        self.backbone_nodes, self.sidechain_nodes = classify_backbone_and_sidechains(
+            self.graph
         )
-
-    @property
-    def backbone_nodes(self) -> List[int]:
-        """Gets the list of backbone node indices.
-
-        Returns:
-            List[int]: List of node indices representing the backbone.
-        """
-        return self._backbone_nodes
-
-    @property
-    def sidechain_nodes(self) -> List[int]:
-        """Gets the list of sidechain node indices.
-
-        Returns:
-            List[int]: List of node indices representing the sidechains.
-        """
-        return self._sidechain_nodes
-
-    @property
-    def graph(self) -> nx.Graph:
-        """Gets the NetworkX graph of the polymer.
-
-        Returns:
-            nx.Graph: The graph representing the polymer structure.
-        """
-        return self._graph
 
     def get_backbone_and_sidechain_molecules(
         self,
     ) -> Tuple[List[Chem.Mol], List[Chem.Mol]]:
-        """Extracts RDKit molecule objects for the backbone and sidechains.
+        """Extracts RDKit molecules for the backbone and sidechains.
 
         Returns:
-            Tuple[List[Chem.Mol], List[Chem.Mol]]: A tuple containing a list with the backbone
-                molecule and a list of sidechain molecules.
+            A tuple of (list of backbone molecules, list of sidechain molecules).
         """
-        backbone_mol = self._subgraph_to_mol(self._graph.subgraph(self._backbone_nodes))
+        if self.terminal_groups:
+            backbone_mol = self._create_backbone_with_terminal_groups()
+        else:
+            backbone_mol = self._subgraph_to_mol(
+                self.graph.subgraph(self.backbone_nodes)
+            )
+
         sidechain_mols = [
-            self._subgraph_to_mol(self._graph.subgraph(nodes))
+            self._subgraph_to_mol(self.graph.subgraph(nodes))
             for nodes in nx.connected_components(
-                self._graph.subgraph(self._sidechain_nodes)
+                self.graph.subgraph(self.sidechain_nodes)
             )
         ]
         return [backbone_mol], sidechain_mols
+
+    def _create_backbone_with_terminal_groups(self) -> Chem.Mol:
+        """Creates a backbone molecule with terminal groups applied.
+
+        Returns:
+            The RDKit molecule for the backbone with terminal groups.
+        """
+        backbone_subgraph = self.graph.subgraph(self.backbone_nodes)
+        mol = Chem.RWMol()
+        node_to_idx = {}
+
+        for node in backbone_subgraph.nodes():
+            if node in self.terminal_groups:
+                terminal_smiles = self.terminal_groups[node]
+                terminal_mol = Chem.MolFromSmiles(terminal_smiles)
+                if terminal_mol:
+                    atom = terminal_mol.GetAtomWithIdx(0)
+                    new_atom = Chem.Atom(atom.GetAtomicNum())
+                    new_atom.SetFormalCharge(atom.GetFormalCharge())
+                    idx = mol.AddAtom(new_atom)
+                    node_to_idx[node] = idx
+                else:
+                    print(
+                        f"Warning: Invalid terminal group SMILES '{terminal_smiles}' for node {node}"
+                    )
+                    atom = Chem.Atom(6)  # Carbon
+                    idx = mol.AddAtom(atom)
+                    node_to_idx[node] = idx
+            else:
+                atom = Chem.Atom(backbone_subgraph.nodes[node]["atomic_num"])
+                atom.SetFormalCharge(
+                    backbone_subgraph.nodes[node].get("formal_charge", 0)
+                )
+                idx = mol.AddAtom(atom)
+                node_to_idx[node] = idx
+
+        for u, v, data in backbone_subgraph.edges(data=True):
+            mol.AddBond(node_to_idx[u], node_to_idx[v], data["bond_type"])
+
+        result = mol.GetMol()
+        return result if result else self._subgraph_to_mol(backbone_subgraph)
 
     def get_backbone_and_sidechain_graphs(self) -> Tuple[nx.Graph, List[nx.Graph]]:
         """Extracts NetworkX graphs for the backbone and sidechains.
 
         Returns:
-            Tuple[nx.Graph, List[nx.Graph]]: A tuple containing the backbone graph and a list
-                of sidechain graphs.
+            A tuple of (backbone graph, list of sidechain graphs).
         """
-        backbone_graph = self._graph.subgraph(self._backbone_nodes)
+        backbone_graph = self.graph.subgraph(self.backbone_nodes)
         sidechain_graphs = [
-            self._graph.subgraph(nodes)
+            self.graph.subgraph(nodes)
             for nodes in nx.connected_components(
-                self._graph.subgraph(self._sidechain_nodes)
+                self.graph.subgraph(self.sidechain_nodes)
             )
         ]
-        return [backbone_graph], sidechain_graphs
+        return backbone_graph, sidechain_graphs
 
-    def _subgraph_to_mol(self, subgraph: nx.Graph) -> Chem.Mol:
+    @staticmethod
+    def _subgraph_to_mol(subgraph: nx.Graph) -> Chem.Mol:
         """Converts a NetworkX subgraph to an RDKit molecule.
 
         Args:
-            subgraph: nx.Graph, the subgraph to convert.
+            subgraph: The subgraph to convert.
 
         Returns:
-            Chem.Mol: The RDKit molecule object created from the subgraph.
+            The RDKit molecule created from the subgraph.
         """
         mol = Chem.RWMol()
         node_to_idx = {}
         for node in subgraph.nodes():
             atom = Chem.Atom(subgraph.nodes[node]["atomic_num"])
-            if "formal_charge" in subgraph.nodes[node]:
-                atom.SetFormalCharge(subgraph.nodes[node]["formal_charge"])
+            atom.SetFormalCharge(subgraph.nodes[node].get("formal_charge", 0))
             idx = mol.AddAtom(atom)
             node_to_idx[node] = idx
         for u, v, data in subgraph.edges(data=True):
@@ -200,18 +231,17 @@ class Polymer:
         """Calculates the exact molecular weight of the polymer.
 
         Returns:
-            float: The molecular weight of the polymer molecule.
+            The molecular weight of the polymer.
         """
-        mol = Chem.MolFromSmiles(self._psmiles)
-        return ExactMolWt(mol)
+        return ExactMolWt(self._mol) if self._mol else 0.0
 
     def get_connection_points(self) -> List[int]:
-        """Gets the list of connection point node indices.
+        """Gets the connection point node indices.
 
         Returns:
-            List[int]: List of node indices representing connection points.
+            List of node indices representing connection points.
         """
-        return self._connection_points
+        return self.connection_points
 
 
 # Helper functions for backbone/sidechain classification
@@ -219,10 +249,10 @@ def find_shortest_paths_between_stars(graph: nx.Graph) -> List[List[int]]:
     """Finds shortest paths between all pairs of asterisk (*) nodes in the graph.
 
     Args:
-        graph: nx.Graph, the input graph to analyze.
+        graph: The input graph to analyze.
 
     Returns:
-        List[List[int]]: A list of shortest paths, where each path is a list of node indices.
+        List of shortest paths, where each path is a list of node indices.
     """
     star_nodes = [
         node for node, data in graph.nodes(data=True) if data["element"] == "*"
@@ -243,36 +273,29 @@ def find_shortest_paths_between_stars(graph: nx.Graph) -> List[List[int]]:
 def find_cycles_including_paths(
     graph: nx.Graph, paths: List[List[int]]
 ) -> List[List[int]]:
-    """Identifies cycles in the graph that include nodes from the given paths.
+    """Identifies cycles that include nodes from the given paths.
 
     Args:
-        graph: nx.Graph, the input graph to analyze.
-        paths: List[List[int]], list of paths whose nodes are used to filter cycles.
+        graph: The input graph to analyze.
+        paths: List of paths whose nodes are used to filter cycles.
 
     Returns:
-        List[List[int]]: A list of unique cycles, where each cycle is a list of node indices.
+        List of cycles, where each cycle is a list of node indices.
     """
     all_cycles = nx.cycle_basis(graph)
     path_nodes = {node for path in paths for node in path}
-    cycles_including_paths = [
-        cycle for cycle in all_cycles if any(node in path_nodes for node in cycle)
-    ]
-    unique_cycles = {
-        tuple(sorted((min(c), max(c)) for c in zip(cycle, cycle[1:] + [cycle[0]])))
-        for cycle in cycles_including_paths
-    }
-    return [list(cycle) for cycle in unique_cycles]
+    return [cycle for cycle in all_cycles if any(node in path_nodes for node in cycle)]
 
 
 def add_degree_one_nodes_to_backbone(graph: nx.Graph, backbone: List[int]) -> List[int]:
     """Adds degree-1 nodes connected to backbone nodes to the backbone list.
 
     Args:
-        graph: nx.Graph, the input graph to analyze.
-        backbone: List[int], the initial list of backbone node indices.
+        graph: The input graph to analyze.
+        backbone: Initial list of backbone node indices.
 
     Returns:
-        List[int]: The updated backbone list including degree-1 nodes.
+        Updated backbone list including degree-1 nodes.
     """
     for node in list(graph.nodes):
         if graph.degree[node] == 1:
@@ -286,20 +309,18 @@ def classify_backbone_and_sidechains(graph: nx.Graph) -> Tuple[List[int], List[i
     """Classifies nodes into backbone and sidechain components based on paths and cycles.
 
     Args:
-        graph: nx.Graph, the input graph to classify.
+        graph: The input graph to classify.
 
     Returns:
-        Tuple[List[int], List[int]]: A tuple containing the list of backbone nodes and
-            the list of sidechain nodes.
+        A tuple of (backbone nodes, sidechain nodes).
     """
     shortest_paths = find_shortest_paths_between_stars(graph)
     cycles = find_cycles_including_paths(graph, shortest_paths)
     backbone_nodes = set()
     for cycle in cycles:
-        for edge in cycle:
-            backbone_nodes.update(edge)
+        backbone_nodes.update(cycle)
     for path in shortest_paths:
         backbone_nodes.update(path)
     backbone_nodes = add_degree_one_nodes_to_backbone(graph, list(backbone_nodes))
     sidechain_nodes = [node for node in graph.nodes if node not in backbone_nodes]
-    return list(set(backbone_nodes)), sidechain_nodes
+    return list(backbone_nodes), sidechain_nodes

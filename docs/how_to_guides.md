@@ -184,6 +184,34 @@ difference = comparator.compare(polymer, molecule) # (4)
 
 The `MultipleFeaturizer` class is used to combine multiple featurizers into a single featurizer object. The `PolymerMoleculeComparator` class is then used to compare the polymer and molecule using the combined featurizers. The `compare` method returns the difference between the polymer and the molecule in terms of the features extracted by the featurizers.
 
+### Adding terminal groups to polymers (user has to specify the terminal groups)
+
+```python
+from polymetrix.featurizers.polymer import Polymer
+from polymetrix.featurizers.sidechain_backbone_featurizer import NumBackBoneFeaturizer, BackBoneFeaturizer, MultipleFeaturizer
+
+polymer = Polymer.from_psmiles("c1ccccc1[*]CCO[*]")
+
+print(polymer.backbone_nodes)
+print(polymer.sidechain_nodes)
+print(polymer.get_connection_points())
+
+# Add terminal groups
+polymer.terminal_groups = {6: "C", 10: "O"} # (1)
+
+backbone_featurizers = [
+    NumBackBoneFeaturizer(),
+    BackBoneFeaturizer(NumRings()),
+    BackBoneFeaturizer(NumAtoms()),
+    BackBoneFeaturizer(TopologicalSurfaceArea()),
+]
+
+backbone_multi_featurizer = MultipleFeaturizer(backbone_featurizers)
+features = backbone_multi_featurizer.featurize(polymer)
+```
+
+The `terminal_groups` attribute is a dictionary where the keys are the node indices of the polymer backbone and the values are the terminal groups to be added. The `MultipleFeaturizer` class is then used to apply multiple featurizers to the polymer with the added terminal groups.
+
 ## Datasets
 
 ### Loading datasets
