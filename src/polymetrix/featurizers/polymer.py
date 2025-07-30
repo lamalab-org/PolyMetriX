@@ -288,17 +288,17 @@ def find_cycles_including_paths(
 
 
 def add_degree_one_nodes_to_backbone(graph: nx.Graph, backbone: List[int]) -> List[int]:
-    """Adds degree-1 nodes connected to backbone nodes to the backbone list.
+    """Adds degree-1 nodes connected to backbone nodes to the backbone list, avoiding duplicates.
 
     Args:
         graph: The input graph to analyze.
         backbone: Initial list of backbone node indices.
 
     Returns:
-        Updated backbone list including degree-1 nodes.
+        Updated backbone list including degree-1 nodes, with no duplicates.
     """
-    for node in list(graph.nodes):
-        if graph.degree[node] == 1:
+    for node in graph.nodes:
+        if graph.degree[node] == 1 and node not in backbone:
             neighbor = next(iter(graph.neighbors(node)))
             if neighbor in backbone:
                 backbone.append(node)
