@@ -29,12 +29,27 @@ class MultipleFeaturizer:
         if (
             hasattr(self, "_last_polymer")
             and self._last_polymer
-            and hasattr(self._last_polymer, "terminal_groups")
-            and self._last_polymer.terminal_groups
+            and (
+                (
+                    hasattr(self._last_polymer, "backbone_terminal_groups")
+                    and self._last_polymer.backbone_terminal_groups
+                )
+                or (
+                    hasattr(self._last_polymer, "sidechain_terminal_groups")
+                    and self._last_polymer.sidechain_terminal_groups
+                )
+            )
         ):
             labels = [
                 label.replace(
                     "_backbonefeaturizer", "_with_terminalgroups_backbonefeaturizer"
+                )
+                .replace(
+                    "_sidechainfeaturizer", "_with_terminalgroups_sidechainfeaturizer"
+                )
+                .replace(
+                    "_fullpolymerfeaturizer",
+                    "_with_terminalgroups_fullpolymerfeaturizer",
                 )
                 for label in labels
             ]

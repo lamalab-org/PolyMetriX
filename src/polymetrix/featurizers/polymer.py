@@ -1,8 +1,13 @@
 from typing import List, Optional, Tuple, Dict
-
 import networkx as nx
 from rdkit import Chem
+from rdkit.Chem import RWMol, Atom, Bond
 from rdkit.Chem.Descriptors import ExactMolWt
+import logging
+
+logging.basicConfig(
+    level=logging.WARNING, format="%(asctime)s - %(levelname)s - %(message)s"
+)
 
 
 class Polymer:
@@ -10,7 +15,8 @@ class Polymer:
 
     Attributes:
         psmiles: Optional[str], the pSMILES string of the polymer.
-        terminal_groups: Optional[Dict[int, str]], maps node indices to terminal group SMILES.
+        backbone_terminal_groups: Optional[Dict[str, str]], maps connection point patterns to backbone terminal group SMILES.
+        sidechain_terminal_groups: Optional[Dict[str, str]], maps connection point patterns to sidechain terminal group SMILES.
         graph: Optional[nx.Graph], the NetworkX graph of the polymer structure.
         backbone_nodes: Optional[List[int]], node indices forming the backbone.
         sidechain_nodes: Optional[List[int]], node indices forming the sidechains.
@@ -20,12 +26,18 @@ class Polymer:
 
     def __init__(self):
         self._psmiles = None
-        self.terminal_groups = None
+        self._backbone_terminal_groups = None
+        self._sidechain_terminal_groups = None
         self.graph = None
         self.backbone_nodes = None
         self.sidechain_nodes = None
         self.connection_points = None
         self._mol = None
+
+    @property
+    def mol(self) -> Optional[Chem.Mol]:
+        """Returns the full polymer molecule, compatible with featurizers expecting a 'mol' attribute."""
+        return self.full_polymer_mol
 
     @classmethod
     def from_psmiles(cls, psmiles: str) -> "Polymer":
@@ -74,18 +86,24 @@ class Polymer:
             raise ValueError(f"Error processing pSMILES: {str(e)}") from e
 
     @property
-    def terminal_groups(self) -> Optional[Dict[int, str]]:
-        """Maps node indices to terminal group SMILES."""
-        return self._terminal_groups
+    def backbone_terminal_groups(self) -> Optional[Dict[str, str]]:
+        """Maps connection point patterns to backbone terminal group SMILES."""
+        return self._backbone_terminal_groups
 
-    @terminal_groups.setter
-    def terminal_groups(self, value: Dict[int, str]):
-        """Sets terminal groups for specific node positions.
+    @backbone_terminal_groups.setter
+    def backbone_terminal_groups(self, value: Dict[str, str]):
+        """Sets terminal groups for backbone connection points."""
+        self._backbone_terminal_groups = value
 
-        Args:
-            value: Mapping of node indices to terminal group SMILES.
-        """
-        self._terminal_groups = value
+    @property
+    def sidechain_terminal_groups(self) -> Optional[Dict[str, str]]:
+        """Maps connection point patterns to sidechain terminal group SMILES."""
+        return self._sidechain_terminal_groups
+
+    @sidechain_terminal_groups.setter
+    def sidechain_terminal_groups(self, value: Dict[str, str]):
+        """Sets terminal groups for sidechain connection points."""
+        self._sidechain_terminal_groups = value
 
     @staticmethod
     def _mol_to_nx(mol: Chem.Mol) -> nx.Graph:
@@ -127,6 +145,80 @@ class Polymer:
             self.graph
         )
 
+    @property
+    def backbone_molecule(self) -> Chem.Mol:
+        """Gets the backbone molecule."""
+        return self._get_backbone_molecule(include_terminal_groups=True)
+
+    def _get_backbone_molecule(self, include_terminal_groups: bool = True) -> Chem.Mol:
+        """Internal method to get backbone molecule with optional terminal groups."""
+        backbone_mol = self._extract_substructure_mol(self.backbone_nodes)
+        if include_terminal_groups and self._backbone_terminal_groups:
+            backbone_mol = insert_terminal_group(
+                backbone_mol, self._backbone_terminal_groups, is_sidechain=False
+            )
+        return backbone_mol
+
+    @property
+    def sidechain_molecules(self) -> List[Chem.Mol]:
+        """Gets the sidechain molecules."""
+        return self._get_sidechain_molecules(include_terminal_groups=True)
+
+    def _get_sidechain_molecules(
+        self, include_terminal_groups: bool = True
+    ) -> List[Chem.Mol]:
+        """Internal method to get sidechain molecules with optional terminal groups."""
+        sidechain_components = list(
+            nx.connected_components(self.graph.subgraph(self.sidechain_nodes))
+        )
+        sidechain_mols = []
+        for component_nodes in sidechain_components:
+            mol = self._extract_substructure_mol(list(component_nodes))
+            if include_terminal_groups and self._sidechain_terminal_groups:
+                mol = insert_terminal_group(
+                    mol, self._sidechain_terminal_groups, is_sidechain=True
+                )
+            sidechain_mols.append(mol)
+        return sidechain_mols
+
+    @property
+    def full_polymer_mol(self) -> Chem.Mol:
+        """Gets the full polymer molecule."""
+        return self._get_full_polymer_mol(include_terminal_groups=True)
+
+    def _get_full_polymer_mol(self, include_terminal_groups: bool = True) -> Chem.Mol:
+        """Internal method to get full polymer molecule with optional terminal groups."""
+        if include_terminal_groups and self._backbone_terminal_groups:
+            return insert_terminal_group(
+                self._mol, self._backbone_terminal_groups, is_sidechain=False
+            )
+        return self._mol
+
+    def _extract_substructure_mol(self, node_indices: List[int]) -> Chem.Mol:
+        """Extracts a substructure molecule from the main molecule using node indices."""
+        if not node_indices:
+            return Chem.MolFromSmiles("")
+        mol = RWMol()
+        old_to_new_idx = {}
+        for old_idx in node_indices:
+            atom = self._mol.GetAtomWithIdx(old_idx)
+            new_atom = Atom(atom.GetAtomicNum())
+            new_atom.SetFormalCharge(atom.GetFormalCharge())
+            if atom.GetIsAromatic():
+                new_atom.SetIsAromatic(True)
+            new_idx = mol.AddAtom(new_atom)
+            old_to_new_idx[old_idx] = new_idx
+        for bond in self._mol.GetBonds():
+            begin_idx = bond.GetBeginAtomIdx()
+            end_idx = bond.GetEndAtomIdx()
+            if begin_idx in old_to_new_idx and end_idx in old_to_new_idx:
+                mol.AddBond(
+                    old_to_new_idx[begin_idx],
+                    old_to_new_idx[end_idx],
+                    bond.GetBondType(),
+                )
+        return mol.GetMol()
+
     def get_backbone_and_sidechain_molecules(
         self,
     ) -> Tuple[List[Chem.Mol], List[Chem.Mol]]:
@@ -135,61 +227,7 @@ class Polymer:
         Returns:
             A tuple of (list of backbone molecules, list of sidechain molecules).
         """
-        if self.terminal_groups:
-            backbone_mol = self._create_backbone_with_terminal_groups()
-        else:
-            backbone_mol = self._subgraph_to_mol(
-                self.graph.subgraph(self.backbone_nodes)
-            )
-
-        sidechain_mols = [
-            self._subgraph_to_mol(self.graph.subgraph(nodes))
-            for nodes in nx.connected_components(
-                self.graph.subgraph(self.sidechain_nodes)
-            )
-        ]
-        return [backbone_mol], sidechain_mols
-
-    def _create_backbone_with_terminal_groups(self) -> Chem.Mol:
-        """Creates a backbone molecule with terminal groups applied.
-
-        Returns:
-            The RDKit molecule for the backbone with terminal groups.
-        """
-        backbone_subgraph = self.graph.subgraph(self.backbone_nodes)
-        mol = Chem.RWMol()
-        node_to_idx = {}
-
-        for node in backbone_subgraph.nodes():
-            if node in self.terminal_groups:
-                terminal_smiles = self.terminal_groups[node]
-                terminal_mol = Chem.MolFromSmiles(terminal_smiles)
-                if terminal_mol:
-                    atom = terminal_mol.GetAtomWithIdx(0)
-                    new_atom = Chem.Atom(atom.GetAtomicNum())
-                    new_atom.SetFormalCharge(atom.GetFormalCharge())
-                    idx = mol.AddAtom(new_atom)
-                    node_to_idx[node] = idx
-                else:
-                    print(
-                        f"Warning: Invalid terminal group SMILES '{terminal_smiles}' for node {node}"
-                    )
-                    atom = Chem.Atom(6)  # Carbon
-                    idx = mol.AddAtom(atom)
-                    node_to_idx[node] = idx
-            else:
-                atom = Chem.Atom(backbone_subgraph.nodes[node]["atomic_num"])
-                atom.SetFormalCharge(
-                    backbone_subgraph.nodes[node].get("formal_charge", 0)
-                )
-                idx = mol.AddAtom(atom)
-                node_to_idx[node] = idx
-
-        for u, v, data in backbone_subgraph.edges(data=True):
-            mol.AddBond(node_to_idx[u], node_to_idx[v], data["bond_type"])
-
-        result = mol.GetMol()
-        return result if result else self._subgraph_to_mol(backbone_subgraph)
+        return [self.backbone_molecule], self.sidechain_molecules
 
     def get_backbone_and_sidechain_graphs(self) -> Tuple[nx.Graph, List[nx.Graph]]:
         """Extracts NetworkX graphs for the backbone and sidechains.
@@ -206,27 +244,6 @@ class Polymer:
         ]
         return backbone_graph, sidechain_graphs
 
-    @staticmethod
-    def _subgraph_to_mol(subgraph: nx.Graph) -> Chem.Mol:
-        """Converts a NetworkX subgraph to an RDKit molecule.
-
-        Args:
-            subgraph: The subgraph to convert.
-
-        Returns:
-            The RDKit molecule created from the subgraph.
-        """
-        mol = Chem.RWMol()
-        node_to_idx = {}
-        for node in subgraph.nodes():
-            atom = Chem.Atom(subgraph.nodes[node]["atomic_num"])
-            atom.SetFormalCharge(subgraph.nodes[node].get("formal_charge", 0))
-            idx = mol.AddAtom(atom)
-            node_to_idx[node] = idx
-        for u, v, data in subgraph.edges(data=True):
-            mol.AddBond(node_to_idx[u], node_to_idx[v], data["bond_type"])
-        return mol.GetMol()
-
     def calculate_molecular_weight(self) -> float:
         """Calculates the exact molecular weight of the polymer.
 
@@ -242,6 +259,160 @@ class Polymer:
             List of node indices representing connection points.
         """
         return self.connection_points
+
+
+def insert_terminal_group(
+    mol: Chem.Mol, terminal_groups: Dict[str, str], is_sidechain: bool = False
+) -> Chem.Mol:
+    """Inserts terminal groups into a molecule by replacing connection points or attaching to sidechains.
+
+    Args:
+        mol: The RDKit molecule to modify.
+        terminal_groups: Dictionary mapping patterns to terminal group SMILES.
+        is_sidechain: If True, attach terminal groups to sidechains; else, replace backbone connection points.
+
+    Returns:
+        A new RDKit molecule with terminal groups inserted.
+    """
+    if not terminal_groups:
+        return mol
+
+    mol_copy = RWMol(mol)
+
+    if is_sidechain:
+        for pattern, terminal_smiles in terminal_groups.items():
+            terminal_mol = Chem.MolFromSmiles(
+                terminal_smiles.replace("*", "")
+            )  # Remove asterisk for attachment
+            if terminal_mol is None:
+                logging.warning(f"Invalid terminal group SMILES '{terminal_smiles}'")
+                continue
+            target_idx = 0  # Attach to the first atom of the sidechain
+            mol_copy = attach_terminal_to_atom(
+                mol_copy, target_idx, terminal_mol, attachment_idx=None
+            )
+    else:
+        asterisk_atoms = [
+            atom.GetIdx() for atom in mol_copy.GetAtoms() if atom.GetSymbol() == "*"
+        ]
+        for pattern, terminal_smiles in terminal_groups.items():
+            if pattern == "[*]":
+                terminal_mol = Chem.MolFromSmiles(terminal_smiles)
+                if terminal_mol is None:
+                    logging.warning(
+                        f"Invalid terminal group SMILES '{terminal_smiles}'"
+                    )
+                    continue
+                attachment_idx = None
+                for atom in terminal_mol.GetAtoms():
+                    if atom.GetSymbol() == "*":
+                        attachment_idx = atom.GetIdx()
+                        break
+                if attachment_idx is None:
+                    logging.warning(
+                        f"No attachment point (*) found in terminal group '{terminal_smiles}'"
+                    )
+                    continue
+                for ast_idx in sorted(asterisk_atoms, reverse=True):
+                    mol_copy = replace_asterisk_with_terminal(
+                        mol_copy, ast_idx, terminal_mol, attachment_idx
+                    )
+
+    return mol_copy.GetMol()
+
+
+def replace_asterisk_with_terminal(
+    mol: RWMol, asterisk_idx: int, terminal_mol: Chem.Mol, attachment_idx: int
+) -> RWMol:
+    """Replaces a single asterisk atom with a terminal group.
+
+    Args:
+        mol: The molecule being modified.
+        asterisk_idx: Index of the asterisk atom to replace.
+        terminal_mol: The terminal group molecule.
+        attachment_idx: Index of the attachment point in the terminal group.
+
+    Returns:
+        The modified molecule.
+    """
+    asterisk_atom = mol.GetAtomWithIdx(asterisk_idx)
+    neighbors = [n.GetIdx() for n in asterisk_atom.GetNeighbors()]
+    if not neighbors:
+        for atom in terminal_mol.GetAtoms():
+            if atom.GetSymbol() != "*":
+                new_atom = Atom(atom.GetAtomicNum())
+                new_atom.SetFormalCharge(atom.GetFormalCharge())
+                mol.ReplaceAtom(asterisk_idx, new_atom)
+                break
+        return mol
+    neighbor_idx = neighbors[0]
+    bond = mol.GetBondBetweenAtoms(asterisk_idx, neighbor_idx)
+    bond_type = bond.GetBondType() if bond else Chem.BondType.SINGLE
+    mol.RemoveAtom(asterisk_idx)
+    if neighbor_idx > asterisk_idx:
+        neighbor_idx -= 1
+    atom_mapping = {}
+    for atom in terminal_mol.GetAtoms():
+        if atom.GetIdx() != attachment_idx:
+            new_atom = Atom(atom.GetAtomicNum())
+            new_atom.SetFormalCharge(atom.GetFormalCharge())
+            new_idx = mol.AddAtom(new_atom)
+            atom_mapping[atom.GetIdx()] = new_idx
+    for bond in terminal_mol.GetBonds():
+        begin_idx = bond.GetBeginAtomIdx()
+        end_idx = bond.GetEndAtomIdx()
+        if begin_idx == attachment_idx or end_idx == attachment_idx:
+            continue
+        if begin_idx in atom_mapping and end_idx in atom_mapping:
+            mol.AddBond(
+                atom_mapping[begin_idx], atom_mapping[end_idx], bond.GetBondType()
+            )
+    for bond in terminal_mol.GetBonds():
+        if bond.GetBeginAtomIdx() == attachment_idx:
+            connection_atom_idx = bond.GetEndAtomIdx()
+        elif bond.GetEndAtomIdx() == attachment_idx:
+            connection_atom_idx = bond.GetBeginAtomIdx()
+        else:
+            continue
+        if connection_atom_idx in atom_mapping:
+            mol.AddBond(neighbor_idx, atom_mapping[connection_atom_idx], bond_type)
+            break
+    return mol
+
+
+def attach_terminal_to_atom(
+    mol: RWMol,
+    target_idx: int,
+    terminal_mol: Chem.Mol,
+    attachment_idx: int = None,
+) -> RWMol:
+    """Attaches a terminal group to a specific atom in the molecule.
+
+    Args:
+        mol: The molecule being modified.
+        target_idx: Index of the target atom to attach the terminal group.
+        terminal_mol: The terminal group molecule.
+        attachment_idx: Index of the attachment point in the terminal group (optional for sidechains).
+
+    Returns:
+        The modified molecule.
+    """
+    atom_mapping = {}
+    for atom in terminal_mol.GetAtoms():
+        new_atom = Atom(atom.GetAtomicNum())
+        new_atom.SetFormalCharge(atom.GetFormalCharge())
+        new_idx = mol.AddAtom(new_atom)
+        atom_mapping[atom.GetIdx()] = new_idx
+    for bond in terminal_mol.GetBonds():
+        begin_idx = bond.GetBeginAtomIdx()
+        end_idx = bond.GetEndAtomIdx()
+        if begin_idx in atom_mapping and end_idx in atom_mapping:
+            mol.AddBond(
+                atom_mapping[begin_idx], atom_mapping[end_idx], bond.GetBondType()
+            )
+    first_terminal_atom_idx = next(iter(atom_mapping.keys()))
+    mol.AddBond(target_idx, atom_mapping[first_terminal_atom_idx], Chem.BondType.SINGLE)
+    return mol
 
 
 # Helper functions for backbone/sidechain classification
