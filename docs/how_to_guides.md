@@ -184,21 +184,23 @@ difference = comparator.compare(polymer, molecule) # (4)
 
 The `MultipleFeaturizer` class is used to combine multiple featurizers into a single featurizer object. The `PolymerMoleculeComparator` class is then used to compare the polymer and molecule using the combined featurizers. The `compare` method returns the difference between the polymer and the molecule in terms of the features extracted by the featurizers.
 
-### Adding terminal groups to polymers (user has to specify the terminal groups)
+### Adding terminal groups to polymers (sidechain, backbone and full polymer)
+
+When working with polymers, you may want to add terminal groups to the polymer backbone or sidechains. This can be done by specifying the terminal groups in the `terminal_groups` attribute of the `Polymer` class.
 
 ```python
 from polymetrix.featurizers.polymer import Polymer
-from polymetrix.featurizers.sidechain_backbone_featurizer import NumBackBoneFeaturizer, BackBoneFeaturizer, MultipleFeaturizer
+from polymetrix.featurizers.sidechain_backbone_featurizer import NumBackBoneFeaturizer, BackBoneFeaturizer, MultipleFeaturizer, FullPolymerFeaturizer
+from polymetrix.featurizers.chemical_featurizer import NumRings, NumAtoms, TopologicalSurfaceArea
 
-polymer = Polymer.from_psmiles("c1ccccc1[*]CCO[*]")
 
-print(polymer.backbone_nodes)
-print(polymer.sidechain_nodes)
-print(polymer.get_connection_points())
+polymer = Polymer.from_psmiles("[*]=C(C#N)NC(=O)c1ccc(C(=O)NC(=[*])C#N)cc1")
 
-# Add terminal groups
-polymer.terminal_groups = {6: "C", 10: "O"} # (1)
+# Add terminal groups for the sidechain and backbone
+polymer.backbone_terminal_groups = {"[*]": "*O"}
+polymer.sidechain_terminal_groups = {"[*]": "*CCO"}
 
+# Featurizers for the backbone and sidechain with terminal groups
 backbone_featurizers = [
     NumBackBoneFeaturizer(),
     BackBoneFeaturizer(NumRings()),
@@ -208,9 +210,29 @@ backbone_featurizers = [
 
 backbone_multi_featurizer = MultipleFeaturizer(backbone_featurizers)
 features = backbone_multi_featurizer.featurize(polymer)
+
+# Sidechain featurizers with terminal groups
+sidechain_featurizers = [
+    NumSideChainFeaturizer(),
+    SideChainFeaturizer(NumAtoms()),
+    SideChainFeaturizer(NumHBondDonors()),
+    SideChainFeaturizer(TopologicalSurfaceArea()),
+]
+
+sidechain_multi_featurizer = MultipleFeaturizer(sidechain_featurizers)
+features = sidechain_multi_featurizer.featurize(polymer)
+
+# Full polymer featurizers with terminal groups
+full_polymer_featurizers = [
+    FullPolymerFeaturizer(NumAtoms()),
+    FullPolymerFeaturizer(NumHBondDonors()),
+    FullPolymerFeaturizer(TopologicalSurfaceArea()),
+]
+full_multi_featurizer = MultipleFeaturizer(full_polymer_featurizers)
+features = full_multi_featurizer.featurize(polymer)
 ```
 
-The `terminal_groups` attribute is a dictionary where the keys are the node indices of the polymer backbone and the values are the terminal groups to be added. The `MultipleFeaturizer` class is then used to apply multiple featurizers to the polymer with the added terminal groups.
+The above code demonstrates how to add terminal groups to the polymer backbone and sidechains, and how to apply featurizers to the polymer with these terminal groups. The `backbone_terminal_groups` and `sidechain_terminal_groups` attributes are used to specify the terminal groups for the backbone and sidechains, respectively. The featurizers are then applied to the polymer with the terminal groups included.
 
 ## Datasets
 
