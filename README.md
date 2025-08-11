@@ -65,6 +65,28 @@ result = featurizer.featurize(polymer)
 
 For more detailed usage instructions, see the [documentation](https://lamalab-org.github.io/PolyMetriX/how_to_guides/).
 
+## Comparator method for Polymer-Organic Mixtures
+
+```python
+from polymetrix.featurizers.polymer import Polymer
+from polymetrix.featurizers.molecule import Molecule, FullMolecularFeaturizer
+from polymetrix.featurizers.chemical_featurizer import MolecularWeight, NumHBondDonors, NumHBondAcceptors, NumRotatableBonds
+from polymetrix.featurizers.sidechain_backbone_featurizer import FullPolymerFeaturizer
+from polymetrix.comparator import PolymerMoleculeComparator
+
+# initialize with required featurizers
+polymer_featurizer = FullPolymerFeaturizer(MolecularWeight())
+molecule_featurizer = FullMolecularFeaturizer(MolecularWeight())
+
+polymer = Polymer.from_psmiles('*CCCCCCNC(=O)c1ccc(C(=O)N*)c(Sc2ccccc2)c1')
+molecule = Molecule.from_smiles('CC(=O)OC1=CC=CC=C1C(=O)O')
+
+comparator = PolymerMoleculeComparator(polymer_featurizer, molecule_featurizer)
+difference = comparator.compare(polymer, molecule)
+```
+
+For more detailed usage instructions, see the [documentation](https://lamalab-org.github.io/PolyMetriX/how_to_guides/).
+
 # How to contribute
 
 We welcome contributions to PolyMetriX! Please refer to the [contribution guidelines](https://lamalab-org.github.io/PolyMetriX/contributing/) for more information.
