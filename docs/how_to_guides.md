@@ -178,7 +178,12 @@ molecule = Molecule.from_smiles('CC(=O)OC1=CC=CC=C1C(=O)O')
 polymer_featurizer = MultipleFeaturizer(polymer_featurizers) # (1)
 molecule_featurizer = MultipleFeaturizer(molecule_featurizers) # (2)
 
-comparator = PolymerMoleculeComparator(polymer_featurizer, molecule_featurizer) # (3)
+comparator = PolymerMoleculeComparator(
+    polymer_multi,
+    molecule_multi,
+    comparisons=["absolute_difference", "signed_difference", "product", "squared_distance", "euclidean_distance"],
+    agg=["mean", "max", "min", "sum"]
+) # (3)
 difference = comparator.compare(polymer, molecule) # (4)
 ```
 
