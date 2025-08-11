@@ -75,13 +75,33 @@ from polymetrix.featurizers.sidechain_backbone_featurizer import FullPolymerFeat
 from polymetrix.comparator import PolymerMoleculeComparator
 
 # initialize with required featurizers
-polymer_featurizer = FullPolymerFeaturizer(MolecularWeight())
-molecule_featurizer = FullMolecularFeaturizer(MolecularWeight())
-
 polymer = Polymer.from_psmiles('*CCCCCCNC(=O)c1ccc(C(=O)N*)c(Sc2ccccc2)c1')
 molecule = Molecule.from_smiles('CC(=O)OC1=CC=CC=C1C(=O)O')
 
-comparator = PolymerMoleculeComparator(polymer_featurizer, molecule_featurizer)
+polymer_featurizers = [
+    FullPolymerFeaturizer(MolecularWeight()),
+    FullPolymerFeaturizer(NumHBondDonors()),
+    FullPolymerFeaturizer(NumHBondAcceptors()),
+    FullPolymerFeaturizer(NumRotatableBonds())
+]
+
+molecule_featurizers = [
+    FullMolecularFeaturizer(MolecularWeight()),
+    FullMolecularFeaturizer(NumHBondDonors()),
+    FullMolecularFeaturizer(NumHBondAcceptors()),
+    FullMolecularFeaturizer(NumRotatableBonds())
+]
+
+polymer_multi = MultipleFeaturizer(polymer_featurizers)
+molecule_multi = MultipleFeaturizer(molecule_featurizers)
+
+comparator = PolymerMoleculeComparator(
+    polymer_multi,
+    molecule_multi,
+    comparisons=["absolute_difference", "signed_difference", "product", "squared_distance", "euclidean_distance"],
+    agg=["mean", "max", "min", "sum"]
+)
+
 difference = comparator.compare(polymer, molecule)
 ```
 
