@@ -132,7 +132,7 @@ from polymetrix.featurizers.polymer import Polymer
 from polymetrix.featurizers.molecule import Molecule, FullMolecularFeaturizer
 from polymetrix.featurizers.chemical_featurizer import MolecularWeight, NumHBondDonors, NumHBondAcceptors, NumRotatableBonds
 from polymetrix.featurizers.sidechain_backbone_featurizer import FullPolymerFeaturizer
-from polymetrix.comparator import PolymerMoleculeComparator
+from polymetrix.featurizers.comparator import PolymerMoleculeComparator
 
 # initialize with required featurizers
 polymer_featurizer = FullPolymerFeaturizer(MolecularWeight())
