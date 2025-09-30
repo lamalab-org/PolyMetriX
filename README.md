@@ -87,6 +87,21 @@ difference = comparator.compare(polymer, molecule)
 
 For more detailed usage instructions, see the [documentation](https://lamalab-org.github.io/PolyMetriX/how_to_guides/).
 
+# Citation
+
+If you use PolyMetriX in your research, please cite the following paper:
+
+```bibtex
+@misc{kunchapu2025polymetrix,
+    title = {PolyMetriX: An Ecosystem for Digital Polymer Chemistry},
+    author = {Kunchapu, S. and Jablonka, K. M.},
+    howpublished = {ChemRxiv},
+    year = {2025},
+    doi = {10.26434/chemrxiv-2025-s2f2r},
+    note = {This content is a preprint and has not been peer-reviewed.}
+}
+```
+
 # How to contribute
 
 We welcome contributions to PolyMetriX! Please refer to the [contribution guidelines](https://lamalab-org.github.io/PolyMetriX/contributing/) for more information.
