@@ -92,13 +92,15 @@ For more detailed usage instructions, see the [documentation](https://lamalab-or
 If you use PolyMetriX in your research, please cite the following paper:
 
 ```bibtex
-@misc{kunchapu2025polymetrix,
-    title = {PolyMetriX: An Ecosystem for Digital Polymer Chemistry},
-    author = {Kunchapu, S. and Jablonka, K. M.},
-    howpublished = {ChemRxiv},
-    year = {2025},
-    doi = {10.26434/chemrxiv-2025-s2f2r},
-    note = {This content is a preprint and has not been peer-reviewed.}
+@article{kunchapu2025polymetrix,
+  title={PolyMetriX: an ecosystem for digital polymer chemistry},
+  author={Kunchapu, Sreekanth and Jablonka, Kevin Maik},
+  journal={npj Computational Materials},
+  volume={11},
+  number={1},
+  pages={312},
+  year={2025},
+  publisher={Nature Publishing Group UK London}
 }
 ```
 
