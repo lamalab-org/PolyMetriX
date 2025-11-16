@@ -3,7 +3,7 @@ import networkx as nx
 from rdkit import Chem
 from polymetrix.polymer import (
     Polymer,
-)  # Assuming the Polymer class is in a file named polymer.py
+)  
 
 
 def test_polymer_creation():
