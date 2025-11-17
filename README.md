@@ -14,6 +14,9 @@
     <a href="https://www.contributor-covenant.org">
         <img alt="Contributor Covenant" src="https://img.shields.io/badge/Contributor%20Covenant-2.1-4baaaa.svg" />
     </a>
+    <a href="https://pypi.org/project/polymetrix">
+        <img alt="PyPI - Total Downloads" src="https://img.shields.io/pepy/dt/polymetrix?color=green&label=pypi%20%7C%20downloads" />
+    </a>
 </p>
 
 <p align="center">
