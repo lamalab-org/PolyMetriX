@@ -20,10 +20,10 @@
 </p>
 
 <p align="center">
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="./docs/figures/overview-dark.png">
-  <img alt="PolyMetriX Overview" src="./docs/figures/overview_polymetrix.png">
-</picture>
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/lamalab-org/PolyMetriX/main/docs/figures/overview_polymetrix.png">
+    <img alt="PolyMetriX Overview" src="https://raw.githubusercontent.com/lamalab-org/PolyMetriX/main/docs/figures/overview_polymetrix.png" style="max-width: 100%;">
+  </picture>
 </p>
 
 _PolyMetriX_ is a comprehensive Python library that powers the entire machine learning workflow for polymer informatics. From data preparation to feature engineering, it provides a unified framework for developing structure-property relationships in polymer science.
