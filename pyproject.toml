@@ -42,7 +42,7 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-bigsmies = [
+bigsmiles = [
   "bigsmiles==0.0.10",
   "setuptools<81",
 ]
