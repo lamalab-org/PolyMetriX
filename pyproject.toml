@@ -42,6 +42,10 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+bigsmies = [
+  "bigsmiles==0.0.10",
+  "setuptools<81",
+]
 dev = [
   "jupyter",
   "docformatter",
