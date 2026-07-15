@@ -8,7 +8,6 @@ from rdkit.Chem.Descriptors import ExactMolWt
 from polymetrix.featurizers.polymer import classify_backbone_and_sidechains
 from polymetrix.bigsmiles.bigsmiles_utils import (
     parse_bigsmiles,
-    stochastic_fragment_graphs,
     repeat_unit_graphs,
     normalize_bigsmiles,
     _iter_stochastic_objects,
