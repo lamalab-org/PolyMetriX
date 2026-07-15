@@ -48,7 +48,10 @@ def _iter_stochastic_objects(text: str):
     i, n = 0, len(text)
     while i < n:
         if text[i] == "{":
-            j = text.index("}", i)
+            try:
+                j = text.index("}", i)
+            except ValueError as exc:
+                raise ValueError("Unmatched '{' in BigSMILES string") from exc
             yield i, j, text[i + 1 : j]
             i = j + 1
         else:
