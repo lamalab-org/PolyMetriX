@@ -1,10 +1,8 @@
-import json
-
-import pytest
 import networkx as nx
+import pytest
 from rdkit import Chem
 
-bigsmiles = pytest.importorskip("bigsmiles")
+pytest.importorskip("bigsmiles")
 
 from polymetrix.bigsmiles import BigSmilesPolymer, RepeatUnit
 from polymetrix.featurizers.polymer import Polymer
